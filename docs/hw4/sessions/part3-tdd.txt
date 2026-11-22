@@ -1,0 +1,1021 @@
+▗ ▗   ▖ ▖  Claude Code v2.1.330
+           Sonnet 5.5 · Claude Pro
+ ▘▘   ▝▝   ~/Desktop/Homework 4
+
+
+❯ Add a line to the coding conventions in CLAUDE.md: commit messages are short  
+  and lowercase, and never include Co-Authored-By or any Claude attribution     
+  lines. Then commit it with the message "claude.md: commit msg style".         
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 1 line
+      67  - Every server action and route handler parses input with a Zod
+           schema before doing anything else.
+      68  - Dates: store UTC in the DB. The scheduler works with plain `{
+           date: "YYYY-MM-DD", start: "HH:MM" }` values in the league's l
+          ocal time zone. Never call `new Date()` or `Date.now()` inside
+          `src/lib`; take "now" as a parameter.
+      69  - Errors from services are typed results (`{ ok: true, value }
+          | { ok: false, error }`) for expected failures; throw only for
+          bugs.
+      70 +- Commit messages are short and lowercase, and never include Co
+         +-Authored-By or any Claude attribution lines.                  
+      71  - Commits follow Conventional Commits: `feat:`, `fix:`, `test:`
+          , `refactor:`, `docs:`, `chore:`. TDD commits are tagged `(red)
+          `, `(green)`, or `(refactor)`.
+      72  - One branch per GitHub issue: `feat/<issue-number>-short-name`
+          .
+      73 
+
+  Committed ca70f59 (ctrl+o to expand)
+  ⎿  PostToolUse:Bash says: Tip: Run /ultrareview before you push to catch bugs 
+     with a cloud-based multi-agent review — 3 free reviews left.
+
+⏺ I added the line to the Coding conventions in CLAUDE.md, just above the
+  Conventional Commits bullet:
+
+  ▎ Commit messages are short and lowercase, and never include Co-Authored-By or
+  ▎ any Claude attribution lines.
+
+  I committed it on main as ca70f59 with the message "claude.md: commit msg
+  style". Per the rule you just added, the commit has no Co-Authored-By line.
+
+✻ Crunched for 7s · done 5:54 PM
+
+❯ Explore src/lib/league and docs/PRD.md (US-3), then plan a strict TDD         
+  implementation of generateRoundRobin(teamIds, seed) in src/lib/scheduler/.    
+  Use these 5 cycles: (1) even team count, every pair plays once, n-1 rounds,   
+  each team once per round; (2) odd count, n rounds, one bye per round, each    
+  team gets exactly one bye; (3) fewer than 2 teams returns an error Result;    
+  (4) same seed gives the same schedule; (5) fast-check property test of cycles 
+  1 and 2 for 2 to 20 teams. Check whether the PRD's wording on byes is right.  
+  Save the plan to docs/plans/round-robin.md.                                   
+
+  Read 5 files, ran 1 shell command (ctrl+o to expand)
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ Approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/explore-src-lib-league-and-doc-humming-kite-
+     of-359e6863-0506-44f3-bfd3-d3496a66dabc.md · /plan to edit
+     Plan: generateRoundRobin (US-3, first slice)
+
+     Context
+
+     US-3 needs a fair single round robin. This slice is only the pairing core:
+     who plays whom in which round. Slots, venues, blackouts, back-to-back and
+     late-slot rules come later and build on it. Pure TDD, five cycles.
+
+     What exploring showed
+
+     - src/lib/scheduler/ does not exist yet. src/lib/league/ does (types, Zod
+       schema, validateLeague, tests) and gives the conventions to copy.
+     - Reuse Result, ok(), err() from src/lib/result.ts. Errors there are typed
+       codes (LeagueError), so the scheduler error should be a typed code too,
+       not a string.
+     - Tests sit next to the code: roundRobin.test.ts, and
+       roundRobin.property.test.ts for the property test. Vitest already
+       collects both (src/**/*.test.ts).
+     - fast-check is already in devDependencies, so no dependency to ask about.
+     - src/lib is pure: no Math.random, no Date. The seed has to drive a small
+       seeded PRNG written in the module.
+     - validateLeague already rejects duplicate team IDs league-wide, so the
+       generator can assume IDs are unique. It still gets a cheap guard (see
+       open items).
+
+     PRD wording on byes is wrong
+
+     US-3 says: "With an odd number of teams, each team gets exactly one bye per
+     round."
+
+     Read literally that is impossible: it says every team sits out every round.
+     What is meant, and what your cycle 2 says, is two separate facts:
+
+     1. Each round has exactly one bye (one team sits out).
+     2. Over the season each team has exactly one bye (n teams, n rounds, n
+        byes).
+
+     Fix in docs/PRD.md: "With an odd number of teams, each round has exactly
+     one bye, and each team gets exactly one bye over the season." Do this as a
+     separate docs: commit before the red test, and tell the user the
+     requirement text changed.
+
+     Design
+
+     File: src/lib/scheduler/roundRobin.ts (types exported from the same file,
+     or types.ts if it grows).
+
+     type Round = { games: [string, string][]; bye: string | null };
+     type RoundRobinSchedule = Round[];
+     type RoundRobinError = { code: "TOO_FEW_TEAMS"; count: number };
+     generateRoundRobin(teamIds: string[], seed: number):
+     Result<RoundRobinSchedule, RoundRobinError>
+
+     Algorithm: circle method. Pad odd counts with a null placeholder; whoever
+     pairs with it has the bye. Rounds = n-1 (even) or n (odd). The seed does
+     not change the pairing property; it only decides the starting order of the
+     teams, via a seeded shuffle (mulberry32), so different seeds give different
+     but equally valid schedules. Input order is not trusted for fairness: the
+     same inputs with the same seed always give the same output.
+
+     No Date, no Math.random, explicit return types.
+
+     Cycles
+
+     Each cycle: red commit, green commit, refactor only if needed. Run npx 
+     vitest run src/lib/scheduler at each step.
+
+     #: 1
+     Test names (from the criterion): "plays n-1 rounds for an even team
+       count", "every pair meets exactly once", "each team plays exactly
+       once per round", "has no byes for an even count"
+     Red because: module does not exist
+     Minimum green: circle method, no shuffle yet, seed ignored
+     ────────────────────────────────────────
+     #: 2
+     Test names (from the criterion): "plays n rounds for an odd count",
+       "has exactly one bye in every round", "gives each team exactly one
+       bye over the season", pairs-once for odd
+     Red because: even-only code mishandles odd
+     Minimum green: pad with a null placeholder, turn its pairing into bye
+     ────────────────────────────────────────
+     #: 3
+     Test names (from the criterion): "returns TOO_FEW_TEAMS for 0 teams",
+       "...for 1 team" (assert ok: false and the code, count included)
+     Red because: no guard, returns an empty schedule
+     Minimum green: early err(...) when teamIds.length < 2
+     ────────────────────────────────────────
+     #: 4
+     Test names (from the criterion): "gives different schedules for
+       different seeds", "gives the same schedule for the same seed" (call
+       twice, toEqual)
+     Red because: see note below
+     Minimum green: seeded shuffle of the team order before the circle
+       method
+     ────────────────────────────────────────
+     #: 5
+     Test names (from the criterion): roundRobin.property.test.ts: for 2..20
+       teams, every round-robin invariant from cycles 1 and 2 over random
+       seeds
+     Red because: see note below
+     Minimum green: none expected; fix any real bug the property test finds
+
+     Notes on strict TDD:
+
+     - Cycle 4: "same seed gives the same schedule" passes on arrival against
+       the cycle 1-3 code, because the circle method is already deterministic. A
+       test that never failed proves nothing. So the red test is "different
+       seeds give different schedules" (use 8 teams and two fixed seeds, checked
+       once by hand that they differ). Keep the same-seed test too: it is what
+       guards the shuffle later.
+     - Cycle 5: this one is a regression net, so it will probably pass on
+       arrival. To show it can fail, break the implementation by hand once (for
+       example drop one pairing), watch the property test fail and report the
+       shrunk counterexample, then revert. Nothing from that check is committed.
+     - Property test setup: fc.integer({ min: 2, max: 20 }) for team count, team
+       IDs built as t0..t(n-1), fc.integer() for the seed. Properties: round
+       count, each pair exactly once, no team twice in a round, odd counts have
+       one bye per round and one per team, even counts have none.
+
+     Acceptance criteria to tests
+
+     ┌────────────────────────────────────────┬───────────────────────────┐
+     │          PRD criterion (US-3)          │           Test            │
+     ├────────────────────────────────────────┼───────────────────────────┤
+     │ Every pair of teams plays exactly once │ cycle 1 and 2 example     │
+     │                                        │ tests, cycle 5 property   │
+     ├────────────────────────────────────────┼───────────────────────────┤
+     │ Odd count: one bye per round, one bye  │ cycle 2, cycle 5          │
+     │ per team (after wording fix)           │                           │
+     ├────────────────────────────────────────┼───────────────────────────┤
+     │ Deterministic for the same input and   │ cycle 4                   │
+     │ seed                                   │                           │
+     ├────────────────────────────────────────┼───────────────────────────┤
+     │ (added) fewer than 2 teams is an       │ cycle 3                   │
+     │ error, not an empty schedule           │                           │
+     └────────────────────────────────────────┴───────────────────────────┘
+
+     Not in this slice (later US-3 work): same-day and back-to-back rules,
+     blackouts, one game per slot per venue, late-slot spread, and returning
+     unsatisfied constraints. Those need slots and dates, which this function
+     deliberately does not take.
+
+     Commit plan
+
+     Branch: feat/<issue-number>-round-robin (issue number needed, none exists
+     in the repo).
+
+     1. docs: save round robin plan (this plan to docs/plans/round-robin.md)
+     2. docs: fix prd bye wording
+     3. test: even team count round robin (red) then feat: even team count round
+        robin (green)
+     4. test: odd team count byes (red) then feat: odd team count byes (green)
+     5. test: reject fewer than 2 teams (red) then feat: reject fewer than 2 
+        teams (green)
+     6. test: seed changes the schedule (red) then feat: seeded team order 
+        (green)
+     7. test: round robin property tests (plus refactor: if any)
+
+     Messages are short and lowercase, with no attribution lines.
+
+     Open items
+
+     - Duplicate team IDs (["a", "a"]) are not in your five cycles. They would
+       produce a schedule where a team plays itself. validateLeague already
+       blocks them upstream, so the plan leaves them out. Say so if you want a
+       sixth cycle (DUPLICATE_TEAM_ID).
+     - Home/away is not modeled; games is an unordered pair. Add it when the
+       score-reporting work needs it.
+
+     Verification
+
+     - npx vitest run src/lib/scheduler after each step.
+     - Before the final commit: npm run typecheck && npm run lint && npm run 
+       test, and npm run test:coverage to confirm src/lib/scheduler is well
+       above the 90% target for src/lib.
+     - Manual check: print the schedule for 6 and 5 teams with a fixed seed and
+       read it once.
+
+     First action after approval
+
+     Plan mode only allows this file, so the copy to docs/plans/round-robin.md
+     (what you asked for) happens as step 1 once the plan is approved.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ I saved the plan to docs/plans/round-robin.md. It is not committed. I haven't
+  started on the PRD fix or any code.
+
+  PRD wording on byes is wrong. US-3 says "each team gets exactly one bye per
+  round." Read literally, that means every team sits out every round. What it
+  should say is that each round has exactly one bye and each team gets exactly
+  one bye over the season. Your cycle 2 already matches that. I'd fix
+  docs/PRD.md in its own docs: commit before the first red test.
+
+  Two cycles won't fail on first write:
+  - Cycle 4: "same seed gives the same schedule" already passes against the
+    cycle 1–3 code, because the circle method is deterministic. The red test is
+    "different seeds give different schedules", and I keep the same-seed test
+    alongside it.
+  - Cycle 5: the property test is a regression net and will probably pass on
+    arrival. To show it can catch a bug, I'll break the implementation by hand
+    once and then revert. That check isn't committed.
+
+  Other findings:
+  - src/lib/scheduler/ doesn't exist yet, so everything is new there.
+  - I'll reuse Result, ok and err from src/lib/result.ts.
+  - fast-check is already in devDependencies, so no new dependency is needed.
+  - The seed drives a small seeded shuffle of team order, because src/lib can't
+    use Math.random.
+  - Duplicate team IDs aren't covered by your five cycles. validateLeague
+    already rejects them upstream, so I left them out.
+
+  One thing I need from you before the first commit: what is the GitHub issue
+  number for the branch name (feat/<issue-number>-round-robin)? Tell me if you
+  want me to commit the plan and start cycle 1.
+
+✻ Sautéed for 49s · done 5:55 PM
+
+❯ commit the plan as "docs: round robin tdd plan"                               
+
+  Committed e5faad0 (ctrl+o to expand)
+
+⏺ I committed the plan as e5faad0 ("docs: round robin tdd plan") on main. The
+  commit has no attribution lines.
+
+  The plan's branch convention is feat/<issue-number>-round-robin, and I still
+  don't have an issue number. I haven't started the PRD wording fix or cycle 1.
+  Give me the number, or tell me to use a placeholder name, and I'll start
+  there.
+
+✻ Sautéed for 4s · done 5:56 PM
+
+❯ Fix the bye wording in docs/PRD.md as the plan says and commit it as "docs:   
+  fix prd bye wording". Then start cycle 1.                                     
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Update(docs/PRD.md)
+  ⎿  Added 1 line, removed 1 line
+      44  As a coordinator, I want to generate a round-robin season autom
+          atically that is fair across teams, so that I'm not building it
+           by hand.
+      45 
+      46  - Every pair of teams in a division plays exactly once (single
+          round robin).
+      47 -- With an odd number of teams, each team gets exactly one bye p
+         -er round.                                                      
+      47 +- With an odd number of teams, each round has exactly one bye, 
+         +and each team gets exactly one bye over the season.            
+      48  - No team plays twice on the same day.
+      49  - No team plays on consecutive days ("no back to back nights").
+      50  - No game is placed on a team's blackout date.
+
+  Committed c14fe7e (ctrl+o to expand)
+
+⏺ Write(src/lib/scheduler/roundRobin.test.ts)
+  ⎿  Wrote 45 lines to src/lib/scheduler/roundRobin.test.ts
+       1 import { describe, expect, it } from "vitest";
+       2 import { generateRoundRobin, type RoundRobinSchedule } from "./r
+         oundRobin";
+       3 
+       4 const SEED = 1;
+       5 
+       6 function teams(count: number): string[] {
+       7   return Array.from({ length: count }, (_, i) => `t${i}`);
+       8 }
+       9 
+     … +36 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Red for the right reason: the module doesn't exist. Committing the red test.
+
+  Committed 8ec825c (ctrl+o to expand)
+
+⏺ Write(src/lib/scheduler/roundRobin.ts)
+  ⎿  Wrote 28 lines to src/lib/scheduler/roundRobin.ts
+       1 import { ok, type Result } from "../result";
+       2 
+       3 export type Round = { games: [string, string][]; bye: string | n
+         ull };
+       4 export type RoundRobinSchedule = Round[];
+       5 export type RoundRobinError = { code: "TOO_FEW_TEAMS"; count: nu
+         mber };
+       6 
+       7 /**
+       8  * Single round robin using the circle method: the first team st
+     … +21 lines (ctrl+o to expand)
+
+  Committed 98de0ae, ran 1 shell command (ctrl+o to expand)
+
+⏺ I fixed the bye wording and finished cycle 1. Nothing is pushed.
+
+  Commits, all on main:
+  - c14fe7e docs: fix prd bye wording. US-3 now reads: "With an odd number of
+    teams, each round has exactly one bye, and each team gets exactly one bye
+    over the season."
+  - 8ec825c test: even team count round robin (red). The four tests are:
+    - plays n-1 rounds;
+    - every pair meets exactly once;
+    - each team plays once per round;
+    - no byes.
+
+    They failed because ./roundRobin didn't exist yet.
+  - 98de0ae feat: even team count round robin (green). The first version of
+    src/lib/scheduler/roundRobin.ts uses the circle method, and the 4 tests now
+    pass. The seed is ignored for now.
+
+  typecheck passes. lint has one warning, _seed unused, which goes away in cycle
+  4 when the seed starts driving the team shuffle.
+
+  Open items:
+  - Branch: these commits are on main, not a feat/<issue-number>-round-robin
+    branch, because I never got an issue number. I can move them onto a branch
+    if you give me a name.
+  - Cycle 1 only covers even counts. Odd and fewer-than-2 inputs aren't handled
+    yet. Those are cycles 2 and 3.
+
+  I haven't started cycle 2 (odd counts and byes). Say so if you want me to
+  continue.
+
+✻ Cooked for 30s · done 5:57 PM
+
+❯ Cycle 2, red step: write ONLY the failing tests for cycle 2 (odd team count)  
+  in roundRobin.test.ts: n rounds, exactly one bye in every round, each team    
+  gets exactly one bye over the season, every pair meets once. Don't touch      
+  roundRobin.ts. Run the scheduler tests, show me they fail on assertions, then 
+  commit as "test: odd team count byes (red)".                                  
+⏺ Update(src/lib/scheduler/roundRobin.test.ts)
+  ⎿  Added 33 lines
+      43      }
+      44    });
+      45  });
+      46 +                                                               
+      47 +describe("generateRoundRobin with an odd team count", () => {  
+      48 +  it("plays n rounds", () => {                                 
+      49 +    expect(scheduleFor(5)).toHaveLength(5);                    
+      50 +  });                                                          
+      51 +                                                               
+      52 +  it("has exactly one bye in every round", () => {             
+      53 +    for (const round of scheduleFor(5)) {                      
+      54 +      expect(round.bye).not.toBeNull();                        
+      55 +      expect(round.games).toHaveLength(2);                     
+      56 +    }                                                          
+      57 +  });                                                          
+      58 +                                                               
+      59 +  it("gives each team exactly one bye over the season", () => {
+      60 +    const byes = scheduleFor(5).map((round) => round.bye);     
+      61 +    expect([...byes].sort()).toEqual(teams(5));                
+      62 +  });                                                          
+      63 +                                                               
+      64 +  it("has every pair of teams meet exactly once", () => {      
+      65 +    const meetings = scheduleFor(5).flatMap((round) => round.ga
+         +mes.map(([a, b]) => pairKey(a, b)));                           
+      66 +    const expected = teams(5).flatMap((a, i) => teams(5).slice(
+         +i + 1).map((b) => pairKey(a, b)));                             
+      67 +                                                               
+      68 +    expect(meetings).toHaveLength(10);                         
+      69 +    expect([...meetings].sort()).toEqual([...expected].sort());
+      70 +  });                                                          
+      71 +                                                               
+      72 +  it("has every team either play once or sit out in each round"
+         +, () => {                                                      
+      73 +    for (const round of scheduleFor(5)) {                      
+      74 +      const present = [...round.games.flat(), round.bye];      
+      75 +      expect([...present].sort()).toEqual(teams(5));           
+      76 +    }                                                          
+      77 +  });                                                          
+      78 +});                                                            
+
+  Committed e7f5b38, ran 1 shell command (ctrl+o to expand)
+
+⏺ Cycle 2's red step is committed as e7f5b38 (test: odd team count byes (red)).
+  I only changed roundRobin.test.ts; roundRobin.ts is untouched.
+
+  The scheduler run shows 5 failed and 4 passed. The 4 that pass are the cycle 1
+  even-count tests. All 5 new tests fail on assertions, not on a crash or
+  missing import:
+
+  ┌────────────────────────────────┬────────────────────────────────────────┐
+  │              Test              │                Failure                 │
+  ├────────────────────────────────┼────────────────────────────────────────┤
+  │ plays n rounds                 │ expected [ Array(4) ] to have a length │
+  │                                │  of 5 but got 4                        │
+  ├────────────────────────────────┼────────────────────────────────────────┤
+  │ has exactly one bye in every   │ expected null not to be null           │
+  │ round                          │                                        │
+  ├────────────────────────────────┼────────────────────────────────────────┤
+  │ gives each team exactly one    │ byes came back as [null, null, null,   │
+  │ bye over the season            │ null] instead of t0 to t4              │
+  ├────────────────────────────────┼────────────────────────────────────────┤
+  │ has every pair of teams meet   │ to have a length of 10 but got 12      │
+  │ exactly once                   │                                        │
+  ├────────────────────────────────┼────────────────────────────────────────┤
+  │ has every team either play     │ t2 appears twice in a round, and a     │
+  │ once or sit out in each round  │ null shows up where a bye should be    │
+  └────────────────────────────────┴────────────────────────────────────────┘
+
+  The pair-count and presence failures come from the cycle 1 code running on 5
+  teams, where it pairs t2 with itself. That's the bug the green step has to
+  fix.
+
+  I added a fifth test beyond your four: every team either plays once or sits
+  out in each round. It pins down that no team is missing or doubled in a round,
+  which the other four don't catch on their own.
+
+  docs/hw4/screenshots/part3-plan.png is untracked and I left it out of the
+  commit. The commits are still on main, without an issue-number branch.
+
+✻ Sautéed for 12s · done 6:00 PM
+
+❯ Green step: minimum change to roundRobin.ts to make the cycle 2 tests pass.   
+  Don't change the tests. Run all tests, then commit as "feat: odd team count   
+  byes (green)".                                                                
+
+⏺ Update(src/lib/scheduler/roundRobin.ts)
+  ⎿  Added 10 lines, removed 3 lines
+      12    teamIds: string[],
+      13    _seed: number,
+      14  ): Result<RoundRobinSchedule, RoundRobinError> {
+      15 -  const [fixed, ...rest] = teamIds;                            
+      15 +  // An odd count gets a null placeholder; whoever is paired wi
+         +th it has the bye.                                             
+      16 +  const entrants: (string | null)[] = teamIds.length % 2 === 0 
+         +? [...teamIds] : [...teamIds, null];                           
+      17 +  const [fixed, ...rest] = entrants;                           
+      18    const rounds: RoundRobinSchedule = [];
+      19 
+      20    for (let r = 0; r < rest.length; r++) {
+      21      const circle = [fixed, ...rest.slice(r), ...rest.slice(0, r
+          )];
+      22      const games: [string, string][] = [];
+      23 +    let bye: string | null = null;                             
+      24      for (let i = 0; i < circle.length / 2; i++) {
+      22 -      games.push([circle[i], circle[circle.length - 1 - i]]);  
+      25 +      const a = circle[i];                                     
+      26 +      const b = circle[circle.length - 1 - i];                 
+      27 +      if (a === null) bye = b;                                 
+      28 +      else if (b === null) bye = a;                            
+      29 +      else games.push([a, b]);                                 
+      30      }
+      24 -    rounds.push({ games, bye: null });                         
+      31 +    rounds.push({ games, bye });                               
+      32    }
+      33 
+      34    return ok(rounds);
+
+  Committed 102a275, ran 1 shell command (ctrl+o to expand)
+
+⏺ The green step is committed as 102a275 (feat: odd team count byes (green)). I
+  changed only roundRobin.ts.
+
+  The change: an odd team count now gets a null placeholder team added to the
+  circle. Whichever team is paired with the placeholder in a round gets that
+  round's bye. An even count has no placeholder, so cycle 1 behaves as before.
+
+  Checks:
+  - The full suite passes: 4 files, 51 tests, including all 9 scheduler tests.
+  - typecheck passes.
+  - lint has the same _seed unused warning as before. It goes away in cycle 4.
+
+  Prettier fails on roundRobin.test.ts. The formatting issue is in the test
+  file, which you said not to touch. Two of the lines I wrote in the cycle 1 and
+  2 tests are probably too long. CI may run format:check, so I'd fix it in a
+  separate style: or refactor: commit, or in the refactor step. Say if you want
+  me to do that.
+
+  Cycle 3 (fewer than 2 teams returns an error) is next. I haven't started it.
+
+✻ Cooked for 13s · done 6:00 PM
+
+❯ Refactor step: anything worth cleaning up in roundRobin.ts? Tests must stay   
+  green. If yes, commit as "refactor: <what>". If not, just say so.             
+
+⏺ No, nothing in roundRobin.ts needs a refactor commit.
+
+  The function is about 25 lines, and the circle rotation and the
+  placeholder-to-bye handling are each one short block with a comment. Pulling
+  the pairing loop into a helper now would only add indirection. Cycle 3 adds
+  the TOO_FEW_TEAMS guard at the top, and cycle 4 adds the seeded shuffle before
+  the rotation, so the shape will change anyway. If the function is still hard
+  to read after cycle 4, I'd revisit it then.
+
+  The one loose end is the Prettier failure on roundRobin.test.ts. That's a
+  formatting fix, not a refactor. I haven't touched it or committed anything.
+
+✻ Worked for 4s · done 6:00 PM
+
+❯ Cycle 3, red step: write ONLY the failing tests for 0 and 1 teams returning   
+  ok: false with code TOO_FEW_TEAMS and the count. Run the tests, show they     
+  fail, commit as "test: reject fewer than 2 teams (red)".                      
+
+⏺ Update(src/lib/scheduler/roundRobin.test.ts)
+  ⎿  Added 16 lines
+      76      }
+      77    });
+      78  });
+      79 +                                                               
+      80 +describe("generateRoundRobin with fewer than 2 teams", () => { 
+      81 +  it("returns TOO_FEW_TEAMS with the count for 0 teams", () => 
+         +{                                                              
+      82 +    expect(generateRoundRobin([], SEED)).toEqual({             
+      83 +      ok: false,                                               
+      84 +      error: { code: "TOO_FEW_TEAMS", count: 0 },              
+      85 +    });                                                        
+      86 +  });                                                          
+      87 +                                                               
+      88 +  it("returns TOO_FEW_TEAMS with the count for 1 team", () => {
+      89 +    expect(generateRoundRobin(teams(1), SEED)).toEqual({       
+      90 +      ok: false,                                               
+      91 +      error: { code: "TOO_FEW_TEAMS", count: 1 },              
+      92 +    });                                                        
+      93 +  });                                                          
+      94 +});                                                            
+
+  Committed df176c4, ran 1 shell command (ctrl+o to expand)
+
+⏺ I committed the cycle 3 red step as df176c4 (test: reject fewer than 2 teams 
+  (red)). I only changed roundRobin.test.ts.
+
+  The scheduler run shows 2 failed and 9 passed. The 9 that pass are the cycle 1
+  and 2 tests. Both new tests fail on assertions, because the current code
+  accepts both inputs:
+
+  ┌───────┬──────────────────────────────┬──────────────────────────────────┐
+  │ Input │           Expected           │              Actual              │
+  ├───────┼──────────────────────────────┼──────────────────────────────────┤
+  │ 0     │ { ok: false, error: { code:  │ { ok: true, value: [] }, an      │
+  │ teams │ "TOO_FEW_TEAMS", count: 0 }  │ empty schedule                   │
+  │       │ }                            │                                  │
+  ├───────┼──────────────────────────────┼──────────────────────────────────┤
+  │ 1     │ { ok: false, error: { code:  │ { ok: true, value: [{ bye: "t0", │
+  │ team  │ "TOO_FEW_TEAMS", count: 1 }  │  games: [] }] }, one round where │
+  │       │ }                            │  the lone team has a bye         │
+  └───────┴──────────────────────────────┴──────────────────────────────────┘
+
+  The 1-team result is the worse of the two. It looks like a real schedule but
+  has no games in it.
+
+  The green step is an early err({ code: "TOO_FEW_TEAMS", count: teamIds.length 
+  }) when teamIds.length < 2. I haven't written it.
+
+✻ Sautéed for 9s · done 6:02 PM
+
+❯ Green step: minimum code to pass. Run all tests, commit as "feat: reject      
+  fewer than 2 teams (green)".                                                  
+
+  Committed e0a34d6, ran 1 shell command (ctrl+o to expand)
+
+⏺ Cycle 3 is green and committed as e0a34d6 (feat: reject fewer than 2 teams 
+  (green)). I changed only roundRobin.ts, adding an import of err and one line
+  at the top of the function:
+
+  if (teamIds.length < 2) return err({ code: "TOO_FEW_TEAMS", count:
+  teamIds.length });
+
+  The full suite passes, 4 files and 53 tests, including both new tests.
+  typecheck passes. lint still shows only the _seed unused warning, which cycle
+  4 resolves.
+
+  Cycle 4 (the seed) is next. I haven't started it.
+
+✻ Worked for 8s · done 6:02 PM
+
+❯ /context 
+  ⎿  Context usage
+     ⛁ ⛁ ⛁ ⛁ ⛁ ⛀ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛀ ⛶ ⛶   Sonnet 5.5
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   claude-sonnet-5-5
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   86.4k/1m tokens (9%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ 
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   Estimated usage by category
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System prompt: 4.5k tokens (0.4%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System tools: 19.2k tokens (2%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ MCP server instructions: 784 tokens (0.1%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Memory files: 7.3k tokens (0.7%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝   ⛁ Skills: 6.3k tokens (0.6%)
+                                               ⛁ Messages: 48.3k tokens (5%)
+                                               ⛶ Free space: 880.6k tokens (88%)
+                                               ⛝ Autocompact buffer: 33k tokens (3%)
+
+     Auto-compact window:  1m tokens
+
+     MCP tools · /mcp (loaded on-demand)
+     └ 81 tools
+
+     Memory files · /memory
+     └ 6 files · 7.3k tokens
+
+     Skills · /skills
+     └ 33 skills · 6.3k tokens
+
+     /context all to expand
+
+❯ /compact keep the tdd plan, the cycle list, and the current test names        
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Read src/lib/scheduler/roundRobin.ts (37 lines)
+  ⎿  Read src/lib/scheduler/roundRobin.test.ts (94 lines)
+  ⎿  Read docs/PRD.md (106 lines)
+  ⎿  Read src/lib/league/validateLeague.ts (135 lines)
+  ⎿  Read src/lib/league/validateLeague.test.ts (216 lines)
+  ⎿  Plan file referenced (~/.claude/plans/explore-src-lib-league-and-doc-hummin
+     g-kite-of-359e6863-0506-44f3-bfd3-d3496a66dabc.md)
+
+❯ Cycle 4, red step: per the plan, write the "different seeds give different    
+  schedules" test (8 teams, two fixed seeds) plus the "same seed gives the same 
+  schedule" test. Only the different-seeds one should fail. Run tests, show     
+  me, commit as "test: seed changes the schedule (red)".                        
+
+⏺ Update(src/lib/scheduler/roundRobin.test.ts)
+  ⎿  Added 10 lines
+      77    });
+      78  });
+      79 
+      80 +describe("generateRoundRobin seeding", () => {                 
+      81 +  it("gives the same schedule for the same seed", () => {      
+      82 +    expect(generateRoundRobin(teams(8), 42)).toEqual(generateRo
+         +undRobin(teams(8), 42));                                       
+      83 +  });                                                          
+      84 +                                                               
+      85 +  it("gives different schedules for different seeds", () => {  
+      86 +    expect(generateRoundRobin(teams(8), 1)).not.toEqual(generat
+         +eRoundRobin(teams(8), 2));                                     
+      87 +  });                                                          
+      88 +});                                                            
+      89 +                                                               
+      90  describe("generateRoundRobin with fewer than 2 teams", () => {
+      91    it("returns TOO_FEW_TEAMS with the count for 0 teams", () =>
+          {
+      92      expect(generateRoundRobin([], SEED)).toEqual({
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Only the different-seeds test fails, on an assertion. The same-seed test
+  passes. Committing.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Cycle 4 red is committed as 7857f26 (test: seed changes the schedule (red)). I
+  only touched roundRobin.test.ts, and I added a new generateRoundRobin seeding
+  describe block with two tests:
+
+  - gives the same schedule for the same seed passes on arrival, as expected.
+    The circle method is already deterministic, so this test stays as a guard
+    for when the shuffle arrives.
+  - gives different schedules for different seeds fails on an assertion, not a
+    crash. It compares 8 teams with seed 1 against seed 2. Vitest reports
+    expected ... to not deeply equal ... and Compared values have no visual 
+    difference, because the seed is ignored today.
+
+  12 of the 13 tests in the file pass. I didn't run the full suite, typecheck or
+  lint for this commit.
+
+  I haven't yet checked that seeds 1 and 2 give different schedules after
+  shuffling, because there is no shuffle to check. I'll confirm that in the
+  green step. If the two seeds happen to give the same shuffled order, I'll tell
+  you rather than quietly change the test.
+
+✻ Baked for 10s · done 6:05 PM
+
+❯ Green step: add the seeded shuffle (mulberry32) of the team order before the  
+  circle method, no Math.random. Run all tests, commit as "feat: seeded team    
+  order (green)".                                                               
+
+⏺ Update(src/lib/scheduler/roundRobin.ts)
+  ⎿  Added 28 lines, removed 3 lines
+       4  export type RoundRobinSchedule = Round[];
+       5  export type RoundRobinError = { code: "TOO_FEW_TEAMS"; count: n
+          umber };
+       6 
+       7 +/** Small seeded PRNG (mulberry32): the same seed always yields
+         + the same sequence in [0, 1). */                               
+       8 +function mulberry32(seed: number): () => number {              
+       9 +  let state = seed >>> 0;                                      
+      10 +  return () => {                                               
+      11 +    state = (state + 0x6d2b79f5) >>> 0;                        
+      12 +    let t = state;                                             
+      13 +    t = Math.imul(t ^ (t >>> 15), t | 1);                      
+      14 +    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);                 
+      15 +    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;              
+      16 +  };                                                           
+      17 +}                                                              
+      18 +                                                               
+      19 +/** Fisher-Yates shuffle driven by the seed; returns a new arra
+         +y. */                                                          
+      20 +function shuffled<T>(items: T[], seed: number): T[] {          
+      21 +  const random = mulberry32(seed);                             
+      22 +  const result = [...items];                                   
+      23 +  for (let i = result.length - 1; i > 0; i--) {                
+      24 +    const j = Math.floor(random() * (i + 1));                  
+      25 +    [result[i], result[j]] = [result[j], result[i]];           
+      26 +  }                                                            
+      27 +  return result;                                               
+      28 +}                                                              
+      29 +                                                               
+      30  /**
+      31   * Single round robin using the circle method: the first team s
+          tays put while the
+       9 - * others rotate one place each round, so every pair meets exac
+         -tly once.                                                      
+      32 + * others rotate one place each round, so every pair meets exac
+         +tly once. The seed                                             
+      33 + * shuffles the team order first, so different seeds give diffe
+         +rent valid schedules.                                          
+      34   */
+      35  export function generateRoundRobin(
+      36    teamIds: string[],
+      13 -  _seed: number,                                               
+      37 +  seed: number,                                                
+      38  ): Result<RoundRobinSchedule, RoundRobinError> {
+      39    if (teamIds.length < 2) return err({ code: "TOO_FEW_TEAMS", c
+          ount: teamIds.length });
+      40 
+      41    // An odd count gets a null placeholder; whoever is paired wi
+          th it has the bye.
+      18 -  const entrants: (string | null)[] = teamIds.length % 2 === 0 
+         -? [...teamIds] : [...teamIds, null];                           
+      42 +  const order = shuffled(teamIds, seed);                       
+      43 +  const entrants: (string | null)[] = order.length % 2 === 0 ? 
+         +order : [...order, null];                                      
+      44    const [fixed, ...rest] = entrants;
+      45    const rounds: RoundRobinSchedule = [];
+      46 
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Cycle 4 is green and committed as cc82a88 (feat: seeded team order (green)). I
+  only changed roundRobin.ts.
+
+  - Shuffle: a mulberry32 PRNG feeds a Fisher-Yates shuffle (shuffled) of the
+    team order. The circle method then runs on the shuffled order. There's no
+    Math.random, and Math.imul and Math.floor are the only Math calls.
+  - Lint: the _seed parameter is now seed and is used, so the unused-variable
+    warning is gone.
+  - Results: all 4 files and 55 tests pass, including gives different schedules 
+    for different seeds. Typecheck is clean, and lint reports no warnings.
+  - Seeds: seeds 1 and 2 do give different schedules for 8 teams, so I didn't
+    need to change the test. I didn't print the two schedules to compare them by
+    eye. The test passing means they differ.
+
+  Cycle 5, the fast-check property test, is next.
+
+✻ Crunched for 12s · done 6:06 PM
+
+❯ Refactor step: clean up if worth it, tests stay green, commit as "refactor:   
+  <what>" or skip.                                                              
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Skipping the refactor. I made no changes and no commit.
+
+  I read roundRobin.ts after the seeded shuffle and found nothing worth cleaning
+  up.
+
+  - Structure: it has three small functions with one job each (mulberry32,
+    shuffled, generateRoundRobin). The comments explain why, and the file passes
+    Prettier.
+  - Moving the PRNG out: I considered moving mulberry32 and shuffled into a
+    shared module like src/lib/random.ts. Nothing else uses them yet, so that
+    would be guessing about the future. If the rescheduler or tiebreak code
+    needs a seeded random, we can extract it then.
+
+  The tests are unchanged and still green (55 passing at cc82a88). The next step
+  is cycle 5, the fast-check property test.
+
+✻ Sautéed for 5s · done 6:06 PM
+
+❯ Cycle 5: write roundRobin.property.test.ts with fast-check, 2 to 20 teams,    
+  random seeds, checking every invariant from cycles 1 and 2. Run it.           
+
+⏺ Write(src/lib/scheduler/roundRobin.property.test.ts)
+  ⎿  Wrote 105 lines to src/lib/scheduler/roundRobin.property.test.ts
+       1 import fc from "fast-check";
+       2 import { describe, it } from "vitest";
+       3 import { generateRoundRobin, type RoundRobinSchedule } from "./r
+         oundRobin";
+       4 
+       5 const teamCount = fc.integer({ min: 2, max: 20 });
+       6 const seed = fc.integer();
+       7 
+       8 function teams(count: number): string[] {
+       9   return Array.from({ length: count }, (_, i) => `t${i}`);
+     … +96 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ The property tests pass on arrival, as the plan expected. To show they can
+  fail, I'll break the implementation temporarily so it drops one game, then
+  revert it.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ I wrote src/lib/scheduler/roundRobin.property.test.ts with 7 properties. Each
+  runs over 2 to 20 teams (fc.integer({ min: 2, max: 20 })), a random seed
+  (fc.integer()) and team IDs t0..t(n-1). I haven't committed it.
+
+  ┌───────────────────────────────────────────────────────┬────────────────┐
+  │                       Property                        │     Covers     │
+  ├───────────────────────────────────────────────────────┼────────────────┤
+  │ n-1 rounds for even counts, n rounds for odd          │ cycles 1 and 2 │
+  ├───────────────────────────────────────────────────────┼────────────────┤
+  │ Every pair meets exactly once                         │ cycles 1 and 2 │
+  ├───────────────────────────────────────────────────────┼────────────────┤
+  │ No team plays twice in a round, and none plays itself │ cycle 1        │
+  ├───────────────────────────────────────────────────────┼────────────────┤
+  │ Every team plays or sits out in every round           │ cycle 2        │
+  ├───────────────────────────────────────────────────────┼────────────────┤
+  │ No byes for an even count                             │ cycle 1        │
+  ├───────────────────────────────────────────────────────┼────────────────┤
+  │ One bye per round and one per team for an odd count   │ cycle 2        │
+  ├───────────────────────────────────────────────────────┼────────────────┤
+  │ Same seed gives the same schedule                     │ cycle 4        │
+  └───────────────────────────────────────────────────────┴────────────────┘
+
+  All 7 pass on arrival. The scheduler folder now has 20 tests passing across 2
+  files.
+
+  To check the tests can fail, I temporarily made the implementation drop the
+  first game of round 1. Two properties failed, "every pair meets exactly once"
+  and "every team plays or sits out in each round". Both had the shrunk
+  counterexample [2, 0], which is 2 teams with seed 0, the smallest case. I then
+  ran git checkout on roundRobin.ts. The file is clean again, and the 20 tests
+  pass again. Nothing from the break check is committed.
+
+  I haven't run typecheck, lint, Prettier or coverage yet. I wrote a few long
+  lines, so Prettier will probably flag this file. Do you want me to run npm run
+  typecheck && npm run lint && npm run test and commit it? I'd suggest the
+  message test: round robin property tests, per the plan. I'd run Prettier on
+  the new file first, since it's mine to format. The older roundRobin.test.ts
+  formatting is still unfixed.
+
+✻ Baked for 18s · done 6:07 PM
+
+❯ Now break roundRobin.ts on purpose (drop one game from a round), run the      
+  property test, show me the failure and the shrunk counterexample fast-check   
+  gives, then revert the break. Don't commit the break.                         
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ The property test catches the break, and I've reverted it.
+
+  The break: in roundRobin.ts, line 56 became else if (!(r === 0 && i === 0)) 
+  games.push([a, b]);. That drops the first game of round 1.
+
+  The failure: 2 of the 7 properties failed.
+
+  × has every pair of teams meet exactly once
+  Error: Property failed after 1 tests
+  { seed: 1338937266, path: "0:0:0", endOnFailure: true }
+  Counterexample: [2,0]
+  Shrunk 2 time(s)
+
+  × has every team either play or sit out in each round
+  Error: Property failed after 2 tests
+  { seed: 1250020330, path: "1:0", endOnFailure: true }
+  Counterexample: [2,0]
+  Shrunk 1 time(s)
+
+  The counterexample: [2,0] is [teamCount, seed], so 2 teams with seed 0. That's
+  the smallest case.
+
+  - A 2-team schedule has one round with one game, and the break removes that
+    game.
+  - fast-check started from a larger failing case and shrank it to this one.
+  - The other 5 properties still passed. Dropping a game doesn't change round
+    counts or byes, and it can't cause a repeat or a self-pairing.
+  - The two that failed are the ones that count games.
+
+  The revert: I ran git checkout src/lib/scheduler/roundRobin.ts. roundRobin.ts
+  has no diff, and the scheduler tests are back to 20 passing across 2 files.
+  Nothing from the break was committed.
+
+  git status shows roundRobin.property.test.ts as untracked. That's the file
+  from the last step, still uncommitted. Three screenshots under
+  docs/hw4/screenshots/ are also untracked, and I didn't touch them.
+
+  The property test is ready to commit once you say so. As before, I'd run
+  Prettier on it and then npm run typecheck && npm run lint && npm run test
+  first.
+
+✻ Brewed for 9s · done 6:07 PM
+
+❯ Run all tests and commit the property test as "test: round robin property     
+  tests".                                                                       
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ The property test is committed as 1b372d7 (test: round robin property tests).
+
+  All checks pass: typecheck and lint are clean, and the suite is 5 files and 62
+  tests passing. The only change before committing was running Prettier on the
+  new file, which reflowed a few long lines. The property logic is the same.
+
+  All five cycles are now committed on main:
+
+  ┌───────────────────────┬─────────────────────────┬─────────┐
+  │         Cycle         │           Red           │  Green  │
+  ├───────────────────────┼─────────────────────────┼─────────┤
+  │ 1. Even count         │ 8ec825c                 │ 98de0ae │
+  ├───────────────────────┼─────────────────────────┼─────────┤
+  │ 2. Odd count and byes │ e7f5b38                 │ 102a275 │
+  ├───────────────────────┼─────────────────────────┼─────────┤
+  │ 3. Fewer than 2 teams │ df176c4                 │ e0a34d6 │
+  ├───────────────────────┼─────────────────────────┼─────────┤
+  │ 4. Seeded order       │ 7857f26                 │ cc82a88 │
+  ├───────────────────────┼─────────────────────────┼─────────┤
+  │ 5. Property tests     │ n/a (passes on arrival) │ 1b372d7 │
+  └───────────────────────┴─────────────────────────┴─────────┘
+
+  Still open:
+  - Branch: all of this is on main, not a feat/<issue-number>-round-robin
+    branch, because no issue number was ever given. Tell me the issue number and
+    I'll move the commits onto a branch.
+  - Prettier: roundRobin.test.ts still fails format:check, from the cycle 1 and
+    2 long lines. I can fix it in a separate style: or refactor: commit if you
+    want.
+  - Coverage: I haven't run npm run test:coverage to check the 90% target for
+    src/lib.
+  - Duplicate IDs: the optional DUPLICATE_TEAM_ID cycle is not done.
+  - Screenshots: four screenshots under docs/hw4/screenshots/ are untracked, and
+    I haven't touched them.
+
+✻ Cooked for 10s · done 6:08 PM
+
+❯ Run npm run typecheck, npm run lint, and npm run test:coverage, and tell me   
+  the coverage for src/lib/scheduler.                                           
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ src/lib/scheduler has 100% coverage. That's above the 90% target for src/lib.
+
+  The report doesn't list per-file figures. It says "No files with missing
+  coverage. 6 files fully covered", and roundRobin.ts is one of those six. The
+  overall figures:
+
+  ┌────────────┬────────────────┐
+  │   Metric   │    Coverage    │
+  ├────────────┼────────────────┤
+  │ Statements │ 100% (133/133) │
+  ├────────────┼────────────────┤
+  │ Branches   │ 100% (70/70)   │
+  ├────────────┼────────────────┤
+  │ Functions  │ 100% (27/27)   │
+  ├────────────┼────────────────┤
+  │ Lines      │ 100% (118/118) │
+  └────────────┴────────────────┘
+
+  - Typecheck: clean.
+  - Lint: clean, with no warnings.
+  - Tests: 5 files and 62 tests pass.
+
+  For roundRobin.ts specifically, 100% branch coverage means the TOO_FEW_TEAMS
+  guard, the even and odd team counts and the bye paths all run. The property
+  test covers the odd and even paths across 2 to 20 teams.
+
+  Coverage says every line runs, not that the assertions are strong. The
+  break-and-revert check earlier is the better evidence that the tests catch
+  real bugs.
+
+✻ Sautéed for 7s · done 6:09 PM

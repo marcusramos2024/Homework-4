@@ -55,4 +55,4 @@ What I've actually used so far:
 - **Fresh session per task (same idea as `/clear`)**: the explore session for US-3 was started new instead of continuing the review session, so it only had CLAUDE.md and the imported docs in context, not the whole review conversation. Export: `docs/hw4/sessions/part2-explore.txt`.
 - **`@imports` instead of pasting docs**: both sessions answered from the PRD and ADRs without me pasting anything, because CLAUDE.md imports them.
 
-`/compact` and `/context` get used during the Part 3 TDD session, which is long enough to need them, and are logged there.
+`/context`, `/compact`, `/clear`, and `claude --continue` were all used during the Part 3 TDD session, with screenshots, in `docs/hw4/part3-tdd-log.md`.
