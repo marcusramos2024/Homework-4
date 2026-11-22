@@ -29,7 +29,7 @@ Why it mattered: the explore step changed the plan. Without it, the obvious move
 
 ## 2. Plan
 
-The plan was written to `docs/plans/league-setup.md` and committed before any code (`21b8b53`), so the plan is part of the history.
+The plan was written to `docs/plans/league-setup.md` and committed before any code (`8826be1`), so the plan is part of the history.
 
 Main decisions in it:
 
@@ -56,12 +56,12 @@ Final state: 30 tests pass, 100% statement, branch, function, and line coverage 
 
 ## 4. Commit
 
-| Commit                                                                            | What                             | Tests after |
-| --------------------------------------------------------------------------------- | -------------------------------- | ----------- |
-| `21b8b53` docs: plan for league setup (US-1)                                      | the plan                         | n/a         |
-| `5b3086d` add zod + league types and input schema                                 | types, result helper, Zod schema | 14 passing  |
-| `1cb8980` validateLeague: season dates, slots outside season, slots past midnight | first validation rules           | 24 passing  |
-| `7d1db17` check for overlapping slots at the same venue                           | overlap detection                | 30 passing  |
+| Commit                                                                                 | What                             | Tests after |
+| -------------------------------------------------------------------------------------- | -------------------------------- | ----------- |
+| `8826be1` docs: plan for league setup (US-1)                                           | the plan                         | n/a         |
+| `b2df333` feat: add zod + league types and input schema                                | types, result helper, Zod schema | 14 passing  |
+| `77758db` feat: validateLeague season dates, slots outside season, slots past midnight | first validation rules           | 24 passing  |
+| `2194d35` feat: check for overlapping slots at the same venue                          | overlap detection                | 30 passing  |
 
 Each commit builds and passes on its own, so any of them can be checked out and run.
 
@@ -94,11 +94,11 @@ Full export of the session: `docs/hw4/sessions/part2-plan-review.txt`.
 
 Back in implement and commit for three of the findings, each with tests in the same commit:
 
-| Commit                                                                      | Finding it fixes                                         | Tests after |
-| --------------------------------------------------------------------------- | -------------------------------------------------------- | ----------- |
-| `b87dbe4` only report the season error when season dates are backwards      | backwards season also flagged every slot                 | 30 passing  |
-| `076e630` reject duplicate ids (slots, venues, divisions, teams)            | duplicate IDs made errors ambiguous                      | 35 passing  |
-| `b83af2a` keep checking well-formed slots when part of the input is invalid | one bad field hid all rule errors; two weak schema tests | 42 passing  |
+| Commit                                                                           | Finding it fixes                                         | Tests after |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------- | ----------- |
+| `c23ac03` fix: only report the season error when season dates are backwards      | backwards season also flagged every slot                 | 30 passing  |
+| `1d15ebc` fix: reject duplicate ids (slots, venues, divisions, teams)            | duplicate IDs made errors ambiguous                      | 35 passing  |
+| `8b903ef` fix: keep checking well-formed slots when part of the input is invalid | one bad field hid all rule errors; two weak schema tests | 42 passing  |
 
 How the third one works: when the schema fails, `validateLeague()` still pulls out the season dates (if both are real dates) and every slot that passes `timeSlotSchema` on its own, then runs the same overlap, season, and midnight checks on those. Broken venues are skipped instead of crashing.
 
@@ -110,3 +110,5 @@ Final state: 42 tests, 100% coverage on `src/lib`, typecheck, lint, and Prettier
 
 - **Slower than just coding?** at first it did but not after I got the hang of it.
 - **Next time:** run the plan mode review right after the plan, before any code. would of saved the 3 fix commits.
+
+Commit hashes in this log were updated after commit messages were reworded to add Conventional Commit prefixes. The session exports keep the original hashes; the mapping is in the "Note on commit hashes" section of `docs/hw4/part3-tdd-log.md`.

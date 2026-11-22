@@ -6,14 +6,14 @@ Run entirely in my own Claude Code session (v2.1.330, Sonnet 5.5). Full export: 
 
 ## Setup before the first test
 
-1. **CLAUDE.md first.** Added a convention that commit messages are short, lowercase, and have no Co-Authored-By lines (`ca70f59`). Another CLAUDE.md iteration, made because Claude Code adds attribution lines by default.
-2. **Plan mode.** Asked it to explore `src/lib/league` and US-3 in the PRD, then plan five TDD cycles and save the plan to `docs/plans/round-robin.md` (`e5faad0`).
+1. **CLAUDE.md first.** Added a convention that commit messages are short, lowercase, and have no Co-Authored-By lines (`e1adda2`). Another CLAUDE.md iteration, made because Claude Code adds attribution lines by default.
+2. **Plan mode.** Asked it to explore `src/lib/league` and US-3 in the PRD, then plan five TDD cycles and save the plan to `docs/plans/round-robin.md` (`bc4f105`).
 
 ![plan mode](screenshots/part3-plan.png)
 
 Things the plan caught before any code was written:
 
-- **The PRD was wrong.** US-3 said "each team gets exactly one bye per round", which would mean every team sits out every round. Fixed to "each round has exactly one bye, and each team gets exactly one bye over the season" as its own commit before the first test (`c14fe7e`).
+- **The PRD was wrong.** US-3 said "each team gets exactly one bye per round", which would mean every team sits out every round. Fixed to "each round has exactly one bye, and each team gets exactly one bye over the season" as its own commit before the first test (`c365a15`).
 - **A test that can't go red.** "Same seed gives the same schedule" would already pass before any seed code exists, since the circle method is deterministic. So the red test for cycle 4 became "different seeds give different schedules", with the same-seed test kept as a guard.
 - **A property test that passes on arrival proves nothing on its own.** So cycle 5 includes breaking the code on purpose to show the property test can fail.
 
@@ -21,11 +21,11 @@ Things the plan caught before any code was written:
 
 | Cycle                                                                               | Red commit                                        | Why it was red                                                | Green commit                                        | Tests after |
 | ----------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------- | ----------- |
-| 1. Even team count: n-1 rounds, every pair once, everyone plays each round, no byes | `8ec825c` test: even team count round robin (red) | module didn't exist yet                                       | `98de0ae` feat: even team count round robin (green) | 46          |
-| 2. Odd team count: n rounds, one bye per round, one bye per team                    | `e7f5b38` test: odd team count byes (red)         | 5 assertion failures (wrong round count, no byes)             | `102a275` feat: odd team count byes (green)         | 51          |
-| 3. Fewer than 2 teams returns `TOO_FEW_TEAMS`                                       | `df176c4` test: reject fewer than 2 teams (red)   | 2 assertion failures                                          | `e0a34d6` feat: reject fewer than 2 teams (green)   | 53          |
-| 4. Seed decides the team order                                                      | `7857f26` test: seed changes the schedule (red)   | only "different seeds" failed; "same seed" passed as expected | `cc82a88` feat: seeded team order (green)           | 55          |
-| 5. fast-check properties for 2 to 20 teams and random seeds                         | `1b372d7` test: round robin property tests        | see below                                                     | none needed                                         | 62          |
+| 1. Even team count: n-1 rounds, every pair once, everyone plays each round, no byes | `e65f733` test: even team count round robin (red) | module didn't exist yet                                       | `8cccc37` feat: even team count round robin (green) | 46          |
+| 2. Odd team count: n rounds, one bye per round, one bye per team                    | `1f59b32` test: odd team count byes (red)         | 5 assertion failures (wrong round count, no byes)             | `2120b8d` feat: odd team count byes (green)         | 51          |
+| 3. Fewer than 2 teams returns `TOO_FEW_TEAMS`                                       | `5a4734a` test: reject fewer than 2 teams (red)   | 2 assertion failures                                          | `8a63523` feat: reject fewer than 2 teams (green)   | 53          |
+| 4. Seed decides the team order                                                      | `98267e1` test: seed changes the schedule (red)   | only "different seeds" failed; "same seed" passed as expected | `62b5edc` feat: seeded team order (green)           | 55          |
+| 5. fast-check properties for 2 to 20 teams and random seeds                         | `f14603c` test: round robin property tests        | see below                                                     | none needed                                         | 62          |
 
 Every red commit contains only test files, and every green commit only `roundRobin.ts`. Each red commit was checked out and run afterwards to confirm it really fails.
 
@@ -68,3 +68,24 @@ Cycle 1 ran in auto mode. The red and green commits landed 12 seconds apart with
 - `src/lib/scheduler`: 100% statements, branches, functions, and lines.
 - `typecheck` and `lint` clean.
 - The session export flagged a Prettier issue in `roundRobin.test.ts` that was never fixed during the session; fixed afterwards in its own formatting commit.
+
+## Note on commit hashes
+
+After grading feedback, older commit messages were reworded to add Conventional Commit prefixes (`feat:`, `fix:`, `chore:`, `docs:`, `style:`), which CLAUDE.md asks for. Rewording a commit changes its hash and the hash of every commit after it. The hashes in this log are the current ones. The session exports in `docs/hw4/sessions/` and the screenshots are left exactly as recorded, so they show the original hashes:
+
+| Original (in exports and screenshots) | Current   | Commit                                    |
+| ------------------------------------- | --------- | ----------------------------------------- |
+| `ca70f59`                             | `e1adda2` | docs: claude.md commit msg style          |
+| `e5faad0`                             | `bc4f105` | docs: round robin tdd plan                |
+| `c14fe7e`                             | `c365a15` | docs: fix prd bye wording                 |
+| `8ec825c`                             | `e65f733` | test: even team count round robin (red)   |
+| `98de0ae`                             | `8cccc37` | feat: even team count round robin (green) |
+| `e7f5b38`                             | `1f59b32` | test: odd team count byes (red)           |
+| `102a275`                             | `2120b8d` | feat: odd team count byes (green)         |
+| `df176c4`                             | `5a4734a` | test: reject fewer than 2 teams (red)     |
+| `e0a34d6`                             | `8a63523` | feat: reject fewer than 2 teams (green)   |
+| `7857f26`                             | `98267e1` | test: seed changes the schedule (red)     |
+| `cc82a88`                             | `62b5edc` | feat: seeded team order (green)           |
+| `1b372d7`                             | `f14603c` | test: round robin property tests          |
+
+Code, tests, dates, and authorship are unchanged; only the message text moved.
