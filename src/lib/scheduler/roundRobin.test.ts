@@ -76,3 +76,19 @@ describe("generateRoundRobin with an odd team count", () => {
     }
   });
 });
+
+describe("generateRoundRobin with fewer than 2 teams", () => {
+  it("returns TOO_FEW_TEAMS with the count for 0 teams", () => {
+    expect(generateRoundRobin([], SEED)).toEqual({
+      ok: false,
+      error: { code: "TOO_FEW_TEAMS", count: 0 },
+    });
+  });
+
+  it("returns TOO_FEW_TEAMS with the count for 1 team", () => {
+    expect(generateRoundRobin(teams(1), SEED)).toEqual({
+      ok: false,
+      error: { code: "TOO_FEW_TEAMS", count: 1 },
+    });
+  });
+});
