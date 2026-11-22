@@ -1,0 +1,102 @@
+▗ ▗   ▖ ▖  Claude Code v2.1.330
+           Sonnet 5.5 · Claude Pro
+ ▘▘   ▝▝   ~/Desktop/Homework 4
+
+
+❯ Explore src/lib/league and docs/PRD.md. Explain how validateLeague works and  
+  what US-3 (round-robin scheduling) will need from it. Use search and read     
+  tools only, don't change any files.                                           
+
+  Read 8 files, ran 1 shell command (ctrl+o to expand)
+
+⏺ How validateLeague works
+
+  validateLeague(input: unknown): Result<League, LeagueError[]> is in
+  src/lib/league/validateLeague.ts. It is pure, with no Next, Prisma or Date
+  use. It runs in two phases and collects every error instead of stopping at the
+  first.
+
+  Phase 1: shape. leagueInputSchema.safeParse(input) (Zod, in schema.ts) checks
+  the structure.
+  - Names must be non-empty and at most 100 characters.
+  - Dates must be real YYYY-MM-DD dates. isRealDate handles leap years and
+    rejects 2027-02-30.
+  - Times must be HH:MM.
+  - Slot duration must be an integer from 15 to 480.
+  - There must be at least one division. Teams default to [].
+
+  Phase 2: rules Zod can't express.
+  - Valid shape:
+    - It runs findDuplicateIds. IDs must be unique within each kind: division,
+      team, venue, slot. Each repeated ID is reported once.
+    - Then it runs checkRules.
+  - Invalid shape:
+    - It maps each Zod issue to an INVALID_INPUT error with a dotted path, such
+      as venues.0.slots.0.start.
+    - salvage() then pulls out the season and every individually well-formed
+      slot, and checkRules runs on those. One bad "7pm" therefore doesn't hide
+      an overlap elsewhere.
+    - findDuplicateIds is not run on this path, so duplicate IDs only appear
+      once the shape is valid.
+
+  checkRules produces these error codes:
+  - SEASON_END_BEFORE_START. When this fires, the outside-season check is
+    skipped so you don't get a flood of noise.
+  - SLOT_OUTSIDE_SEASON. Dates are compared as strings, and the boundary days
+    are allowed.
+  - SLOT_CROSSES_MIDNIGHT. This is start + duration > 1440 minutes.
+  - SLOT_OVERLAP. Per venue, it sorts slots by date and start, then compares
+    each slot to every later slot that starts before it ends. Touching slots
+    (19:00–20:00 and 20:00–21:00) are fine, and different venues never conflict.
+
+  On success it returns ok(league), with League as defined in types.ts.
+  Otherwise it returns err(LeagueError[]).
+
+  A coordinator-only 403 is deliberately not here. It's deferred to requireRole
+  and tracked in docs/backlog.md.
+
+  What US-3 needs from it
+
+  US-3 criteria from the PRD: single round robin per division, one bye per round
+  for odd team counts, no same-day or consecutive-day games, blackout dates, at
+  most one game per venue slot, late slots (start ≥ 21:00) spread so the spread
+  is ≤ 1, determinism by seed, and returning unsatisfied constraints instead of
+  a partial schedule.
+
+  What validateLeague already provides.
+  - A trusted League with unique IDs, real dates and times, and in-season,
+    non-overlapping, same-day slots. The scheduler can treat the slots as clean
+    inputs.
+  - Slots that never cross midnight, so "late" is simply toMinutes(slot.start) 
+    >= 21 * 60. toMinutes is reusable from time.ts.
+  - Plain YYYY-MM-DD strings. "Consecutive day" will need date arithmetic that
+    is pure and takes no new Date(). time.ts has no day-increment helper yet,
+    and isRealDate and daysInMonth are the building blocks.
+
+  Gaps US-3 will have to fill.
+  1. Blackout dates. The League and Team types have none. US-2 adds them, along
+     with the per-league limit N, which the plan explicitly left for that story.
+     US-3 needs a blackoutDates: DateString[] on teams, or a separate input.
+  2. Seed. Nothing carries a seed. Generation will take (league, blackouts, 
+     seed) as explicit parameters, per ADR-6.
+  3. Fewer than 2 teams, or too few slots. validateLeague accepts a league with
+     no venues, no slots, or a division of 0 or 1 teams. The plan says US-3 must
+     report "nowhere to put games" as an unsatisfied constraint, not crash.
+  4. Late-slot fairness and consecutive-day rules. These depend on time-of-day
+     and date adjacency across slots, which are only raw data in League today.
+  5. Output types. There are no Game, Schedule or UnsatisfiedConstraint types
+     yet. These would reuse the Result helper in src/lib/result.ts, probably as
+     Result<Schedule, UnsatisfiedConstraint[]>.
+  6. Scope. Slots are per venue, not per division, so the scheduler must decide
+     how divisions share venue slots. The PRD doesn't say.
+
+  Suggested shape. Add a src/lib/scheduler/ module that takes a League from
+  validateLeague, plus blackouts and a seed. The first step would be a pure
+  circle-method pairing function that produces the rounds and byes. The slot
+  assignment and fairness constraints would follow it, each test-first as the
+  testing doc requires.
+
+  I made no file changes. I also didn't write a plan file or call ExitPlanMode,
+  since you only asked for an explanation.
+
+✻ Cooked for 21s · done 5:36 PM
