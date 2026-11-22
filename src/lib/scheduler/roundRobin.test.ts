@@ -43,3 +43,36 @@ describe("generateRoundRobin with an even team count", () => {
     }
   });
 });
+
+describe("generateRoundRobin with an odd team count", () => {
+  it("plays n rounds", () => {
+    expect(scheduleFor(5)).toHaveLength(5);
+  });
+
+  it("has exactly one bye in every round", () => {
+    for (const round of scheduleFor(5)) {
+      expect(round.bye).not.toBeNull();
+      expect(round.games).toHaveLength(2);
+    }
+  });
+
+  it("gives each team exactly one bye over the season", () => {
+    const byes = scheduleFor(5).map((round) => round.bye);
+    expect([...byes].sort()).toEqual(teams(5));
+  });
+
+  it("has every pair of teams meet exactly once", () => {
+    const meetings = scheduleFor(5).flatMap((round) => round.games.map(([a, b]) => pairKey(a, b)));
+    const expected = teams(5).flatMap((a, i) => teams(5).slice(i + 1).map((b) => pairKey(a, b)));
+
+    expect(meetings).toHaveLength(10);
+    expect([...meetings].sort()).toEqual([...expected].sort());
+  });
+
+  it("has every team either play once or sit out in each round", () => {
+    for (const round of scheduleFor(5)) {
+      const present = [...round.games.flat(), round.bye];
+      expect([...present].sort()).toEqual(teams(5));
+    }
+  });
+});
