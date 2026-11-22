@@ -24,7 +24,11 @@ describe("generateRoundRobin with an even team count", () => {
 
   it("has every pair of teams meet exactly once", () => {
     const meetings = scheduleFor(6).flatMap((round) => round.games.map(([a, b]) => pairKey(a, b)));
-    const expected = teams(6).flatMap((a, i) => teams(6).slice(i + 1).map((b) => pairKey(a, b)));
+    const expected = teams(6).flatMap((a, i) =>
+      teams(6)
+        .slice(i + 1)
+        .map((b) => pairKey(a, b)),
+    );
 
     expect(meetings).toHaveLength(15);
     expect([...meetings].sort()).toEqual([...expected].sort());
@@ -63,7 +67,11 @@ describe("generateRoundRobin with an odd team count", () => {
 
   it("has every pair of teams meet exactly once", () => {
     const meetings = scheduleFor(5).flatMap((round) => round.games.map(([a, b]) => pairKey(a, b)));
-    const expected = teams(5).flatMap((a, i) => teams(5).slice(i + 1).map((b) => pairKey(a, b)));
+    const expected = teams(5).flatMap((a, i) =>
+      teams(5)
+        .slice(i + 1)
+        .map((b) => pairKey(a, b)),
+    );
 
     expect(meetings).toHaveLength(10);
     expect([...meetings].sort()).toEqual([...expected].sort());

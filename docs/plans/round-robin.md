@@ -43,13 +43,13 @@ No `Date`, no `Math.random`, explicit return types.
 
 Each cycle: red commit, green commit, refactor only if needed. Run `npx vitest run src/lib/scheduler` at each step.
 
-| #   | Test names (from the criterion)                                                                                                                        | Red because                         | Minimum green                                                |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- | ------------------------------------------------------------ |
-| 1   | "plays n-1 rounds for an even team count", "every pair meets exactly once", "each team plays exactly once per round", "has no byes for an even count" | module does not exist               | circle method, no shuffle yet, seed ignored                  |
-| 2   | "plays n rounds for an odd count", "has exactly one bye in every round", "gives each team exactly one bye over the season", pairs-once for odd         | even-only code mishandles odd       | pad with a null placeholder, turn its pairing into `bye`     |
-| 3   | "returns TOO_FEW_TEAMS for 0 teams", "...for 1 team" (assert `ok: false` and the code, `count` included)                                               | no guard, returns an empty schedule | early `err(...)` when `teamIds.length < 2`                   |
-| 4   | "gives different schedules for different seeds", "gives the same schedule for the same seed" (call twice, `toEqual`)                                   | see note below                      | seeded shuffle of the team order before the circle method    |
-| 5   | `roundRobin.property.test.ts`: for 2..20 teams, every round-robin invariant from cycles 1 and 2 over random seeds                                      | see note below                      | none expected; fix any real bug the property test finds      |
+| #   | Test names (from the criterion)                                                                                                                       | Red because                         | Minimum green                                             |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------- |
+| 1   | "plays n-1 rounds for an even team count", "every pair meets exactly once", "each team plays exactly once per round", "has no byes for an even count" | module does not exist               | circle method, no shuffle yet, seed ignored               |
+| 2   | "plays n rounds for an odd count", "has exactly one bye in every round", "gives each team exactly one bye over the season", pairs-once for odd        | even-only code mishandles odd       | pad with a null placeholder, turn its pairing into `bye`  |
+| 3   | "returns TOO_FEW_TEAMS for 0 teams", "...for 1 team" (assert `ok: false` and the code, `count` included)                                              | no guard, returns an empty schedule | early `err(...)` when `teamIds.length < 2`                |
+| 4   | "gives different schedules for different seeds", "gives the same schedule for the same seed" (call twice, `toEqual`)                                  | see note below                      | seeded shuffle of the team order before the circle method |
+| 5   | `roundRobin.property.test.ts`: for 2..20 teams, every round-robin invariant from cycles 1 and 2 over random seeds                                     | see note below                      | none expected; fix any real bug the property test finds   |
 
 Notes on strict TDD:
 
@@ -59,12 +59,12 @@ Notes on strict TDD:
 
 ## Acceptance criteria to tests
 
-| PRD criterion (US-3)                                                | Test                                       |
-| ------------------------------------------------------------------- | ------------------------------------------ |
-| Every pair of teams plays exactly once                              | cycle 1 and 2 example tests, cycle 5 property |
-| Odd count: one bye per round, one bye per team (after wording fix)  | cycle 2, cycle 5                           |
-| Deterministic for the same input and seed                           | cycle 4                                    |
-| (added) fewer than 2 teams is an error, not an empty schedule       | cycle 3                                    |
+| PRD criterion (US-3)                                               | Test                                          |
+| ------------------------------------------------------------------ | --------------------------------------------- |
+| Every pair of teams plays exactly once                             | cycle 1 and 2 example tests, cycle 5 property |
+| Odd count: one bye per round, one bye per team (after wording fix) | cycle 2, cycle 5                              |
+| Deterministic for the same input and seed                          | cycle 4                                       |
+| (added) fewer than 2 teams is an error, not an empty schedule      | cycle 3                                       |
 
 Not in this slice (later US-3 work): same-day and back-to-back rules, blackouts, one game per slot per venue, late-slot spread, and returning unsatisfied constraints. Those need slots and dates, which this function deliberately does not take.
 
