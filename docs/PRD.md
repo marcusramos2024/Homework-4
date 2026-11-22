@@ -44,7 +44,7 @@ As a captain, I want to submit dates my team can't play before the season is gen
 As a coordinator, I want to generate a round-robin season automatically that is fair across teams, so that I'm not building it by hand.
 
 - Every pair of teams in a division plays exactly once (single round robin).
-- With an odd number of teams, each team gets exactly one bye per round.
+- With an odd number of teams, each round has exactly one bye, and each team gets exactly one bye over the season.
 - No team plays twice on the same day.
 - No team plays on consecutive days ("no back to back nights").
 - No game is placed on a team's blackout date.
