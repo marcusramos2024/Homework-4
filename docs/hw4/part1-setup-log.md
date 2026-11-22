@@ -2,6 +2,10 @@
 
 Annotated record of how the Claude Code setup was built. Screenshots go in `docs/hw4/screenshots/`.
 
+## Before this class (my notes)
+
+Usually, I didnt think much about it and just created a Claude Code session. I would install the Karpathy skill but that is it. no CLAUDE.md, no permissions, no plan.
+
 ## 1. Scaffold and tooling
 
 - Scaffolded Next.js 16 (App Router, TypeScript, Tailwind, ESLint).
@@ -25,6 +29,8 @@ Annotated record of how the Claude Code setup was built. Screenshots go in `docs
 
 Personal overrides go in `.claude/settings.local.json`, which is git-ignored.
 
+**My notes:** nope, overall it looked good. no prompts got annoying yet and nothing allowed that shouldnt be.
+
 Screenshot: `/permissions` showing the rules. `[screenshot: permissions.png]`
 
 ## 4. /init and iteration
@@ -37,11 +43,14 @@ Screenshot: `/permissions` showing the rules. `[screenshot: permissions.png]`
 
 The diff between the two commits is the evidence of iteration: `git log -p -- CLAUDE.md`.
 
+**My notes:** very suprised by the quality, after a bit of stearing it got exactly what I needed. never knew about /init before this.
+
 ## 5. Context management in practice
 
-Screenshots to capture during Parts 2 and 3:
+What I've actually used so far:
 
-- `/context` before a large step. `[screenshot]`
-- `/compact keep the scheduler constraints and the failing test names` mid-feature. `[screenshot]`
-- `/clear` after committing a feature, before starting the next. `[screenshot]`
-- `claude --continue` the next day to resume. `[screenshot]`
+- **`claude --resume`**: reopened the session where Plan mode reviewed the league setup plan, then `/export`ed it to `docs/hw4/sessions/part2-plan-review.txt` so the log is in the repo.
+- **Fresh session per task (same idea as `/clear`)**: the explore session for US-3 was started new instead of continuing the review session, so it only had CLAUDE.md and the imported docs in context, not the whole review conversation. Export: `docs/hw4/sessions/part2-explore.txt`.
+- **`@imports` instead of pasting docs**: both sessions answered from the PRD and ADRs without me pasting anything, because CLAUDE.md imports them.
+
+`/compact` and `/context` get used during the Part 3 TDD session, which is long enough to need them, and are logged there.

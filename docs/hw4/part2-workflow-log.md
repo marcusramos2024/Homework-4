@@ -2,7 +2,10 @@
 
 Feature: **US-1 league setup** (docs/PRD.md). Turns raw "create league" input into a validated `League` the scheduler in Part 3 can trust.
 
-How it was run: Claude (Opus 5.5) in an agent session with file and shell access to this repo, using the same tool pattern as Claude Code (glob/grep/read to explore, a written plan reviewed before any code, then implementation and commits). Tests ran with Vitest after every step.
+How it was run:
+
+- Explore, plan, implement, and commit for the first version: Claude (Opus 5.5) in an agent session with file and shell access to this repo, using the same tool pattern as Claude Code (glob/grep/read to explore, a written plan before any code, then implementation and commits). Tests ran with Vitest after every step.
+- Plan mode review and the US-3 explore: my own Claude Code sessions (v2.1.330, Sonnet 5.5), both in Plan mode. Exports are in `docs/hw4/sessions/`.
 
 ## 1. Explore
 
@@ -17,6 +20,10 @@ What was run, and what it turned up:
 | Check dependencies            | `grep -n zod package.json`                          | Zod not installed, even though CLAUDE.md requires it at every server boundary.                                                      |
 | Read the requirement          | `sed -n '/### US-1/,/### US-2/p' docs/PRD.md`       | 5 acceptance criteria. The last one (403 for non-coordinators) needs auth, which doesn't exist yet.                                 |
 | Read the conventions          | `grep -nE "Result\|Date\|camelCase\|Zod" CLAUDE.md` | `src/lib` stays pure, dates and times are `"YYYY-MM-DD"` / `"HH:MM"` strings, no `new Date()` in `src/lib`, tests sit next to code. |
+
+Second explore, in my Claude Code session (Plan mode, read-only), after the fixes. Asked it to explain how `validateLeague` works and what US-3 will need from it. It read 8 files and listed the gaps US-3 has to fill (no blackout dates or seed on `League`, no `Game`/`Schedule` types, a league can still have 0 or 1 teams, how divisions share venue slots). That list is the starting point for Part 3. Full export: `docs/hw4/sessions/part2-explore.txt`.
+
+![explore session](screenshots/explore.png)
 
 Why it mattered: the explore step changed the plan. Without it, the obvious move would have been `Date` objects and a create-league server action. CLAUDE.md rules out the first, and the missing auth layer rules out doing the second properly right now.
 
@@ -79,6 +86,10 @@ It read 7 files and confirmed the code follows the plan's six decisions and comm
 - **Code vs plan:** an `INVALID_INPUT` code the plan never listed; schema errors return early, so one bad `"7pm"` hides every overlap error in the same submission (weakening decision 1); two tests are weaker than the plan's table claims (blank name instead of missing name, `2027-02-30` instead of a wrong format like `01/18/2027`).
 - **Missed by the plan:** a season that ends before it starts also reports every slot as outside the season; slot, venue, team, and division IDs aren't checked for uniqueness, which makes error IDs ambiguous; a league with no venues or slots passes; the 403 follow-up isn't linked to an issue.
 
+Full export of the session: `docs/hw4/sessions/part2-plan-review.txt`.
+
+**My notes:** the one I wouldnt have caught myself is duplicate ids.
+
 ## 6. Fixes from the review
 
 Back in implement and commit for three of the findings, each with tests in the same commit:
@@ -94,3 +105,8 @@ How the third one works: when the schema fails, `validateLeague()` still pulls o
 The plan was updated with these as decisions 7 to 10, plus what was considered and left for later (empty leagues, time zone, unknown fields). The 403 criterion has issue text in `docs/backlog.md`.
 
 Final state: 42 tests, 100% coverage on `src/lib`, typecheck, lint, and Prettier clean.
+
+## My notes on the workflow
+
+- **Slower than just coding?** at first it did but not after I got the hang of it.
+- **Next time:** run the plan mode review right after the plan, before any code. would of saved the 3 fix commits.
