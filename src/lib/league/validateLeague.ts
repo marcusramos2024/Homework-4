@@ -20,7 +20,7 @@ export function validateLeague(input: unknown): Result<League, LeagueError[]> {
   }
 
   const league: League = parsed.data;
-  const errors: LeagueError[] = [];
+  const errors: LeagueError[] = findDuplicateIds(league);
 
   // YYYY-MM-DD strings sort the same way the dates do, so plain comparison works.
   const seasonIsValid = league.seasonEnd >= league.seasonStart;
@@ -68,6 +68,30 @@ function findOverlaps(venue: Venue): LeagueError[] {
       const next = sorted[j];
       if (next.date !== current.date || toMinutes(next.start) >= currentEnd) break;
       errors.push({ code: "SLOT_OVERLAP", venueId: venue.id, slotIds: [current.id, next.id] });
+    }
+  }
+  return errors;
+}
+
+/** IDs must be unique within their kind across the whole league, or error IDs are ambiguous. */
+function findDuplicateIds(league: League): LeagueError[] {
+  const groups = {
+    division: league.divisions.map((d) => d.id),
+    team: league.divisions.flatMap((d) => d.teams.map((t) => t.id)),
+    venue: league.venues.map((v) => v.id),
+    slot: league.venues.flatMap((v) => v.slots.map((s) => s.id)),
+  } as const;
+
+  const errors: LeagueError[] = [];
+  for (const [kind, ids] of Object.entries(groups) as [keyof typeof groups, string[]][]) {
+    const seen = new Set<string>();
+    const reported = new Set<string>();
+    for (const id of ids) {
+      if (seen.has(id) && !reported.has(id)) {
+        errors.push({ code: "DUPLICATE_ID", kind, id });
+        reported.add(id);
+      }
+      seen.add(id);
     }
   }
   return errors;

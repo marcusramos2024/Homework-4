@@ -119,6 +119,45 @@ describe("validateLeague", () => {
     });
   });
 
+  describe("duplicate ids", () => {
+    it("rejects two slots with the same id, even at different venues", () => {
+      const input = validLeagueInput();
+      input.venues[1].slots[0].id = "slot-1";
+      expect(errorsFor(input)).toEqual([{ code: "DUPLICATE_ID", kind: "slot", id: "slot-1" }]);
+    });
+
+    it("rejects duplicate team ids across divisions", () => {
+      const input = validLeagueInput();
+      input.divisions.push({ id: "div-rec", name: "Rec", teams: [{ id: "team-1", name: "Copy" }] });
+      expect(errorsFor(input)).toEqual([{ code: "DUPLICATE_ID", kind: "team", id: "team-1" }]);
+    });
+
+    it("rejects duplicate venue and division ids", () => {
+      const input = validLeagueInput();
+      input.venues[1].id = "venue-marino";
+      input.divisions.push({ id: "div-open", name: "Open 2", teams: [] });
+      expect(errorsFor(input)).toEqual(
+        expect.arrayContaining([
+          { code: "DUPLICATE_ID", kind: "division", id: "div-open" },
+          { code: "DUPLICATE_ID", kind: "venue", id: "venue-marino" },
+        ]),
+      );
+    });
+
+    it("reports an id once even if it appears three times", () => {
+      const input = validLeagueInput();
+      input.venues[0].slots[1].id = "slot-1";
+      input.venues[1].slots[0].id = "slot-1";
+      expect(errorsFor(input).filter((e) => e.code === "DUPLICATE_ID")).toHaveLength(1);
+    });
+
+    it("allows the same id in different kinds", () => {
+      const input = validLeagueInput();
+      input.venues[0].id = "team-1";
+      expect(validateLeague(input).ok).toBe(true);
+    });
+  });
+
   describe("slots past midnight", () => {
     it("rejects a slot that runs past midnight", () => {
       const input = validLeagueInput();

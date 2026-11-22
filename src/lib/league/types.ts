@@ -42,4 +42,5 @@ export type LeagueError =
   | { code: "SEASON_END_BEFORE_START"; seasonStart: DateString; seasonEnd: DateString }
   | { code: "SLOT_OUTSIDE_SEASON"; venueId: string; slotId: string }
   | { code: "SLOT_CROSSES_MIDNIGHT"; venueId: string; slotId: string }
-  | { code: "SLOT_OVERLAP"; venueId: string; slotIds: [string, string] };
+  | { code: "SLOT_OVERLAP"; venueId: string; slotIds: [string, string] }
+  | { code: "DUPLICATE_ID"; kind: "division" | "team" | "venue" | "slot"; id: string };
