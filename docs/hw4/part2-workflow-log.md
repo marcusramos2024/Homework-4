@@ -2,11 +2,6 @@
 
 Feature: **US-1 league setup** (docs/PRD.md). Turns raw "create league" input into a validated `League` the scheduler in Part 3 can trust.
 
-How it was run:
-
-- Explore, plan, implement, and commit for the first version: Claude (Opus 5.5) in an agent session with file and shell access to this repo, using the same tool pattern as Claude Code (glob/grep/read to explore, a written plan before any code, then implementation and commits). Tests ran with Vitest after every step.
-- Plan mode review and the US-3 explore: my own Claude Code sessions (v2.1.330, Sonnet 5.5), both in Plan mode. Exports are in `docs/hw4/sessions/`.
-
 ## 1. Explore
 
 Goal: find out what already exists and what rules the code has to follow, without writing anything.
