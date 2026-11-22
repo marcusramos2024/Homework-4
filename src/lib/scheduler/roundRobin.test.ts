@@ -77,6 +77,16 @@ describe("generateRoundRobin with an odd team count", () => {
   });
 });
 
+describe("generateRoundRobin seeding", () => {
+  it("gives the same schedule for the same seed", () => {
+    expect(generateRoundRobin(teams(8), 42)).toEqual(generateRoundRobin(teams(8), 42));
+  });
+
+  it("gives different schedules for different seeds", () => {
+    expect(generateRoundRobin(teams(8), 1)).not.toEqual(generateRoundRobin(teams(8), 2));
+  });
+});
+
 describe("generateRoundRobin with fewer than 2 teams", () => {
   it("returns TOO_FEW_TEAMS with the count for 0 teams", () => {
     expect(generateRoundRobin([], SEED)).toEqual({
