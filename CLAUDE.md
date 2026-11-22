@@ -67,6 +67,7 @@ docs/            PRD, ADRs, testing, plans
 - Every server action and route handler parses input with a Zod schema before doing anything else.
 - Dates: store UTC in the DB. The scheduler works with plain `{ date: "YYYY-MM-DD", start: "HH:MM" }` values in the league's local time zone. Never call `new Date()` or `Date.now()` inside `src/lib`; take "now" as a parameter.
 - Errors from services are typed results (`{ ok: true, value } | { ok: false, error }`) for expected failures; throw only for bugs.
+- Commit messages are short and lowercase, and never include Co-Authored-By or any Claude attribution lines.
 - Commits follow Conventional Commits: `feat:`, `fix:`, `test:`, `refactor:`, `docs:`, `chore:`. TDD commits are tagged `(red)`, `(green)`, or `(refactor)`.
 - One branch per GitHub issue: `feat/<issue-number>-short-name`.
 
