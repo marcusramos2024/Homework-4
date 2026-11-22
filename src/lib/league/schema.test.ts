@@ -19,6 +19,17 @@ describe("leagueInputSchema", () => {
     expect(leagueInputSchema.safeParse(input).success).toBe(false);
   });
 
+  it("rejects a league with no name field at all", () => {
+    const { name, ...input } = validLeagueInput();
+    expect(name).toBeDefined();
+    expect(leagueInputSchema.safeParse(input).success).toBe(false);
+  });
+
+  it("rejects a season date in the wrong format", () => {
+    const input = { ...validLeagueInput(), seasonStart: "01/18/2027" };
+    expect(leagueInputSchema.safeParse(input).success).toBe(false);
+  });
+
   it("rejects a season date that is not a real date", () => {
     const input = { ...validLeagueInput(), seasonEnd: "2027-02-30" };
     expect(leagueInputSchema.safeParse(input).success).toBe(false);

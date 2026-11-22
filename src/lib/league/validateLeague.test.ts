@@ -23,6 +23,44 @@ describe("validateLeague", () => {
     ]);
   });
 
+  describe("when some fields are malformed", () => {
+    it("still reports overlaps among the well-formed slots", () => {
+      const input = validLeagueInput();
+      input.name = "";
+      input.venues[0].slots[1].start = "19:30";
+      expect(errorsFor(input)).toEqual([
+        expect.objectContaining({ code: "INVALID_INPUT", path: "name" }),
+        { code: "SLOT_OVERLAP", venueId: "venue-marino", slotIds: ["slot-1", "slot-2"] },
+      ]);
+    });
+
+    it("still reports slots outside the season next to a malformed slot", () => {
+      const input = validLeagueInput();
+      input.venues[0].slots[0].start = "7pm";
+      input.venues[1].slots[0].date = "2027-06-01";
+      expect(errorsFor(input)).toEqual([
+        expect.objectContaining({ code: "INVALID_INPUT", path: "venues.0.slots.0.start" }),
+        { code: "SLOT_OUTSIDE_SEASON", venueId: "venue-cabot", slotId: "slot-3" },
+      ]);
+    });
+
+    it("skips season checks when a season date is malformed, but keeps overlap checks", () => {
+      const input = { ...validLeagueInput(), seasonStart: "01/18/2027" };
+      input.venues[0].slots[1].start = "19:30";
+      expect(errorsFor(input).map((e) => e.code)).toEqual(["INVALID_INPUT", "SLOT_OVERLAP"]);
+    });
+
+    it("returns only the input error when the whole thing is not an object", () => {
+      expect(errorsFor("not a league").map((e) => e.code)).toEqual(["INVALID_INPUT"]);
+      expect(errorsFor(null).map((e) => e.code)).toEqual(["INVALID_INPUT"]);
+    });
+
+    it("ignores venues that are too broken to check", () => {
+      const input = { ...validLeagueInput(), venues: [{ name: "no id" }, "junk"] };
+      expect(errorsFor(input).every((e) => e.code === "INVALID_INPUT")).toBe(true);
+    });
+  });
+
   describe("season dates", () => {
     it("rejects a season that ends before it starts, without flagging every slot too", () => {
       const input = { ...validLeagueInput(), seasonStart: "2027-03-26", seasonEnd: "2027-01-18" };
