@@ -67,3 +67,14 @@ Each commit builds and passes on its own, so any of them can be checked out and 
 | Slots outside the season are rejected                       | done, `validateLeague.test.ts`        |
 | Two slots at the same venue cannot overlap                  | done, `validateLeague.test.ts`        |
 | Only coordinators can create or edit leagues (403)          | deferred until auth exists (see plan) |
+
+## 5. Plan mode review
+
+After the four commits, the plan was reviewed in my own Claude Code session in Plan mode (read-only), asking it to compare `docs/plans/league-setup.md` against US-1 and the code in `src/lib/league` without changing any files.
+
+![plan mode review](screenshots/plan-mode.png)
+
+It read 7 files and confirmed the code follows the plan's six decisions and commit order. It also found real gaps:
+
+- **Code vs plan:** an `INVALID_INPUT` code the plan never listed; schema errors return early, so one bad `"7pm"` hides every overlap error in the same submission (weakening decision 1); two tests are weaker than the plan's table claims (blank name instead of missing name, `2027-02-30` instead of a wrong format like `01/18/2027`).
+- **Missed by the plan:** a season that ends before it starts also reports every slot as outside the season; slot, venue, team, and division IDs aren't checked for uniqueness, which makes error IDs ambiguous; a league with no venues or slots passes; the 403 follow-up isn't linked to an issue.
