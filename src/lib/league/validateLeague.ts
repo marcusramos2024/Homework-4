@@ -23,7 +23,8 @@ export function validateLeague(input: unknown): Result<League, LeagueError[]> {
   const errors: LeagueError[] = [];
 
   // YYYY-MM-DD strings sort the same way the dates do, so plain comparison works.
-  if (league.seasonEnd < league.seasonStart) {
+  const seasonIsValid = league.seasonEnd >= league.seasonStart;
+  if (!seasonIsValid) {
     errors.push({
       code: "SEASON_END_BEFORE_START",
       seasonStart: league.seasonStart,
@@ -34,7 +35,8 @@ export function validateLeague(input: unknown): Result<League, LeagueError[]> {
   for (const venue of league.venues) {
     errors.push(...findOverlaps(venue));
     for (const slot of venue.slots) {
-      if (slot.date < league.seasonStart || slot.date > league.seasonEnd) {
+      // With backwards season dates every slot would look "outside", which is just noise.
+      if (seasonIsValid && (slot.date < league.seasonStart || slot.date > league.seasonEnd)) {
         errors.push({ code: "SLOT_OUTSIDE_SEASON", venueId: venue.id, slotId: slot.id });
       }
       if (toMinutes(slot.start) + slot.durationMinutes > MINUTES_PER_DAY) {

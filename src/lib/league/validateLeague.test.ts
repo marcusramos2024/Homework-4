@@ -24,9 +24,8 @@ describe("validateLeague", () => {
   });
 
   describe("season dates", () => {
-    it("rejects a season that ends before it starts", () => {
+    it("rejects a season that ends before it starts, without flagging every slot too", () => {
       const input = { ...validLeagueInput(), seasonStart: "2027-03-26", seasonEnd: "2027-01-18" };
-      input.venues = [];
       expect(errorsFor(input)).toEqual([
         { code: "SEASON_END_BEFORE_START", seasonStart: "2027-03-26", seasonEnd: "2027-01-18" },
       ]);
