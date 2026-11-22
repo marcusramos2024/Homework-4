@@ -31,15 +31,17 @@ Personal overrides go in `.claude/settings.local.json`, which is git-ignored.
 
 **My notes:** nope, overall it looked good. no prompts got annoying yet and nothing allowed that shouldnt be.
 
-Screenshot: `/permissions` showing the rules. `[screenshot: permissions.png]`
+Screenshot of `/permissions` showing the allow rules loaded from the file:
+
+![permissions](screenshots/permissions.png)
 
 ## 4. /init and iteration
 
-1. Ran `/init` in Claude Code. Committed its raw output unchanged. `[screenshot: init.png]`
-2. Compared it against what the project needs. What `/init` got right and what it missed:
-   - Got right: _fill in after running_
-   - Missed: _fill in after running_ (expected gaps: testing strategy, auth rules, do's and don'ts, PRD context)
-3. Rewrote CLAUDE.md with stack, commands, layout, conventions, do's and don'ts, OWASP notes, Definition of Done, and `@imports` of the PRD, ADRs, testing strategy, context strategy, and the Next.js AGENTS.md. Committed as the second CLAUDE.md revision.
+1. Ran `/init` in Claude Code and committed its raw output unchanged (`docs: CLAUDE.md from /init (unedited)`).
+2. Compared it against what the project needs.
+   - **Got right:** it read the docs we had already written and summarized the layering and authorization rules accurately. It also caught things we had not written down: `next.config.ts` enables `cacheComponents` and `partialPrefetching`, route-type globals like `LayoutProps` only exist after `next typegen`, Vitest only collects `.ts` files in a node environment, and how to run a single test. It said the repo is still a scaffold and most of the architecture is planned.
+   - **Missed:** it referenced `docs/PRD.md` and the other docs as plain paths instead of `@imports`, so their content would not load into a session automatically. Because of that it copied big parts of those docs inline, which duplicates them and will drift. It had no coding conventions (naming, typed service results, date handling, commit and branch format), no do's and don'ts, no OWASP notes, and no Definition of Done.
+3. Rewrote CLAUDE.md: kept the useful `/init` findings (Next.js 16 notes, single-test commands, Vitest scope, project status), replaced the inline copies with `@imports` (PRD, architecture, testing, context management, and the Next.js `AGENTS.md`), and added conventions, do's and don'ts, OWASP Top 10 notes, and a Definition of Done. Committed as `docs: update CLAUDE.md after /init`.
 
 The diff between the two commits is the evidence of iteration: `git log -p -- CLAUDE.md`.
 
