@@ -78,3 +78,19 @@ It read 7 files and confirmed the code follows the plan's six decisions and comm
 
 - **Code vs plan:** an `INVALID_INPUT` code the plan never listed; schema errors return early, so one bad `"7pm"` hides every overlap error in the same submission (weakening decision 1); two tests are weaker than the plan's table claims (blank name instead of missing name, `2027-02-30` instead of a wrong format like `01/18/2027`).
 - **Missed by the plan:** a season that ends before it starts also reports every slot as outside the season; slot, venue, team, and division IDs aren't checked for uniqueness, which makes error IDs ambiguous; a league with no venues or slots passes; the 403 follow-up isn't linked to an issue.
+
+## 6. Fixes from the review
+
+Back in implement and commit for three of the findings, each with tests in the same commit:
+
+| Commit                                                                      | Finding it fixes                                         | Tests after |
+| --------------------------------------------------------------------------- | -------------------------------------------------------- | ----------- |
+| `b87dbe4` only report the season error when season dates are backwards      | backwards season also flagged every slot                 | 30 passing  |
+| `076e630` reject duplicate ids (slots, venues, divisions, teams)            | duplicate IDs made errors ambiguous                      | 35 passing  |
+| `b83af2a` keep checking well-formed slots when part of the input is invalid | one bad field hid all rule errors; two weak schema tests | 42 passing  |
+
+How the third one works: when the schema fails, `validateLeague()` still pulls out the season dates (if both are real dates) and every slot that passes `timeSlotSchema` on its own, then runs the same overlap, season, and midnight checks on those. Broken venues are skipped instead of crashing.
+
+The plan was updated with these as decisions 7 to 10, plus what was considered and left for later (empty leagues, time zone, unknown fields). The 403 criterion has issue text in `docs/backlog.md`.
+
+Final state: 42 tests, 100% coverage on `src/lib`, typecheck, lint, and Prettier clean.

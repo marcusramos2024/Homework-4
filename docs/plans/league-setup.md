@@ -63,3 +63,19 @@ Decisions:
 2. Zod, the types, the result helper, and the input schema with its tests.
 3. Season date checks, slots outside the season, slots past midnight.
 4. Overlapping slots at the same venue.
+
+## Revisions after the Plan mode review
+
+The review (see docs/hw4/part2-workflow-log.md, section 5) found gaps. Changes made:
+
+7. **Errors from malformed input no longer hide rule errors.** If the schema fails, the season dates and every slot that is individually well-formed are still checked, so one bad `"7pm"` doesn't hide an overlap elsewhere. This is what decision 1 was supposed to guarantee.
+8. **Backwards season dates report one error.** `SEASON_END_BEFORE_START` only; slots are not also flagged as outside the season.
+9. **IDs are unique per kind.** New `DUPLICATE_ID` error for repeated division, team, venue, or slot IDs. The same ID in two different kinds is allowed.
+10. **`INVALID_INPUT` is part of the design.** Schema failures are reported with the field path, for example `venues.0.slots.0.start`.
+
+Considered and left for later:
+
+- **A league with no venues or slots.** Still valid here. A coordinator may save a league before the facility gives them slots; the scheduler (US-3) will report that there is nowhere to put games.
+- **League time zone, US-2 blackout limit, US-7 bracket size.** Belong to those stories and will be added with them.
+- **Unknown fields.** Zod drops them silently, which is safe for now.
+- **403 for non-coordinators.** Tracked as a GitHub issue (text in docs/backlog.md) until auth exists.
