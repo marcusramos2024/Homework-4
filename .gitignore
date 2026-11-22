@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# claude code (personal settings stay local)
+.claude/settings.local.json
+
+# hw4 staging (not part of the repo)
+/_hw4-staging/
