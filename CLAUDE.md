@@ -1,59 +1,112 @@
-# CLAUDE.md
+# Fixture
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Intramural league scheduling for university rec programs. Coordinators build leagues and publish schedules, captains manage teams and report scores, players RSVP, and the public sees schedules and standings. Built by Marcus Ramos and Theodore Pei for CS 6983 Project 3.
 
-## Project
+Status: early. The repo is a Next.js scaffold plus docs; most of the layout below is planned, not built. Check what exists before assuming a file or helper is there.
 
-Fixture: intramural league scheduling (leagues, round-robin generation, rescheduling, score reporting, standings, playoff seeding). The repo is currently a fresh Next.js scaffold; most of the architecture below is planned, not yet built. Requirements live in `docs/PRD.md` (user stories US-1 to US-8 with testable acceptance criteria), decisions in `docs/architecture.md` (ADRs), and testing rules in `docs/testing.md`.
+Requirements and acceptance criteria: @docs/PRD.md
+Architecture decisions: @docs/architecture.md
+Testing strategy: @docs/testing.md
+Context management: @docs/context-management.md
+Next.js version notes: @AGENTS.md
 
-## Next.js version warning
+## Tech stack
 
-This is Next.js 16.4 with React 19.3, and its APIs differ from older versions. Read the relevant guide in `node_modules/next/dist/docs/` before writing Next.js code, and heed deprecation notices (see `AGENTS.md`). `next.config.ts` enables `cacheComponents` and `partialPrefetching`, and Tailwind v4 runs through a Turbopack CSS loader rule. Route types are generated, so `LayoutProps<"/">`-style globals exist after `next typegen`.
+- Next.js 16, App Router, React 19, TypeScript (strict)
+- PostgreSQL (Neon) via Prisma
+- Auth.js (NextAuth v5) with Google sign-in, roles stored in our `Membership` table
+- Zod for validation, Tailwind CSS v4 for styling
+- Vitest (unit, integration, property tests with fast-check), Playwright (E2E)
+- Vercel for preview and production deploys, GitHub Actions for CI
 
 ## Commands
 
 ```
-npm run dev               # dev server on :3000
-npm run build
-npm run lint              # ESLint (next core-web-vitals + typescript + prettier)
-npm run typecheck         # next typegen && tsc --noEmit
-npm run format            # Prettier write (format:check to verify)
-npm run test              # Vitest single run (unit + integration)
-npm run test:watch
-npm run test:coverage     # fails below 70% lines
-npm run test:e2e          # Playwright; starts `npm run dev` itself
+npm run dev             # local dev server on :3000
+npm run test            # Vitest, single run
+npm run test:watch      # Vitest watch mode (use during TDD)
+npm run test:coverage   # coverage, fails under 70% lines
+npm run test:e2e        # Playwright
+npm run typecheck       # next typegen && tsc --noEmit
+npm run lint            # ESLint
+npm run format          # Prettier
 ```
 
 Single test: `npx vitest run path/to/file.test.ts -t "test name"`. Single E2E: `npx playwright test tests/e2e/file.spec.ts`.
 
-Vitest only collects `src/**/*.test.ts` and `tests/integration/**/*.test.ts` (node environment, `.ts` not `.tsx`). Coverage excludes `src/app/**`. The `@/` alias maps to `src/`.
+Vitest only collects `src/**/*.test.ts` and `tests/integration/**/*.test.ts` in a node environment (`.ts`, not `.tsx`). Coverage excludes `src/app/**`. The `@/` alias maps to `src/`.
 
-## Architecture (from docs/architecture.md)
+Run `npm run typecheck && npm run lint && npm run test` before every commit.
 
-Layering:
+## Next.js 16 notes
 
-- `src/app/`: routes, pages, server actions. Keep them thin: auth check, Zod validation, call a service. Never import Prisma here.
-- `src/server/`: services and Prisma data access, the only layer that touches the DB. `src/server/auth.ts` provides `requireUser()`, `requireRole(leagueId, role)`, `requireCaptainOf(teamId)`.
-- `src/lib/`: pure domain logic (`scheduler/`, `standings/`) and shared types. Must not import from `src/server`, `src/app`, Next.js, React, Prisma, or Auth.js. No I/O and no `Date.now()`; callers pass "now" and a seed so generation is deterministic.
-- `src/components/`: UI.
+- Next.js 16 and React 19 APIs differ from older versions. Read the relevant guide in `node_modules/next/dist/docs/` before writing Next.js code, and follow deprecation notices.
+- `next.config.ts` enables `cacheComponents` and `partialPrefetching`. Tailwind v4 runs through a Turbopack CSS loader rule.
+- Route types are generated: globals like `LayoutProps<"/">` only exist after `next typegen`, which is why `typecheck` runs it first.
 
-Key rules:
+## Project layout
 
-- Authorization is enforced server-side in services via the `require*` helpers on every mutation and non-public read; UI hiding is cosmetic. Roles live on our own `Membership` table.
-- Public pages read through a dedicated `publicReadService` that selects only published, non-personal fields (never emails, rosters, or RSVPs).
-- Cancelling a game creates a `RescheduleProposal`; games move only after coordinator approval. The stretch natural-language feature (US-8) only produces a structured request and goes through the same proposal path.
-- If no valid schedule exists, the generator returns unsatisfied constraints, not a partial schedule.
+```
+src/app/         routes, pages, server actions. Thin: auth check, validate, call a service.
+src/server/      services and Prisma access. Only layer that touches the DB.
+src/server/auth.ts   requireUser(), requireRole(leagueId, role), requireCaptainOf(teamId)
+src/lib/scheduler/   pure scheduling and rescheduling logic
+src/lib/standings/   pure standings, tiebreakers, seeding
+src/components/  UI components
+tests/integration/   service tests against a test database
+tests/e2e/       Playwright specs
+docs/            PRD, ADRs, testing, plans
+```
 
-Planned stack: Prisma on Neon Postgres, Auth.js v5 (Google), Zod at server boundaries, Tailwind v4, deployed on Vercel.
+## Coding conventions
 
-## Testing workflow (from docs/testing.md)
+- TypeScript strict. No `any`; use `unknown` and narrow. Export explicit return types from `src/lib` and `src/server`.
+- Files: `camelCase.ts` for modules, `PascalCase.tsx` for components. Tests sit next to the code as `name.test.ts`; property tests as `name.property.test.ts`.
+- Server Components by default. Add `"use client"` only for interactivity.
+- Mutations go through server actions that call a service. No Prisma calls in `src/app`.
+- Every server action and route handler parses input with a Zod schema before doing anything else.
+- Dates: store UTC in the DB. The scheduler works with plain `{ date: "YYYY-MM-DD", start: "HH:MM" }` values in the league's local time zone. Never call `new Date()` or `Date.now()` inside `src/lib`; take "now" as a parameter.
+- Errors from services are typed results (`{ ok: true, value } | { ok: false, error }`) for expected failures; throw only for bugs.
+- Commits follow Conventional Commits: `feat:`, `fix:`, `test:`, `refactor:`, `docs:`, `chore:`. TDD commits are tagged `(red)`, `(green)`, or `(refactor)`.
+- One branch per GitHub issue: `feat/<issue-number>-short-name`.
 
-- Domain logic is TDD: commit the failing test (`test: ... (red)`), then the implementation (`feat: ... (green)`), then `refactor: ...`.
-- Each PRD acceptance criterion maps to at least one test, named after the criterion, e.g. `it("never schedules a team on consecutive days")`.
-- Don't change a test to make it pass unless the requirement changed, and say so in the commit message.
-- Unit tests sit next to the code; property tests (fast-check) are `src/lib/**/*.property.test.ts`; integration tests in `tests/integration/` run against a test Postgres; E2E in `tests/e2e/`.
-- Coverage target: 70% lines overall, 90% for `src/lib/`.
+## Do
 
-## Permissions and context
+- Read the acceptance criteria in docs/PRD.md before touching a feature, and write tests for them first.
+- Keep `src/lib` pure: no imports from Next.js, React, Prisma, Auth.js, `src/server`, or `src/app`.
+- Check authorization on the server in every mutation and every non-public read, using the `require*` helpers.
+- Make reschedules go through a `RescheduleProposal` that a coordinator approves.
+- Keep the scheduler deterministic: pass an explicit seed.
+- Use Plan mode for any change touching more than two files, and save the plan to `docs/plans/` if it spans sessions.
+- When you learn something that would have saved time, suggest adding it here.
 
-`.claude/settings.json` denies reading/editing `.env*` and `*.pem`, editing `prisma/migrations/**`, `rm -rf`, force push, `git reset --hard`, `git clean`, `prisma migrate reset`, and curl/wget. Installs, migrations, push/merge, PRs, and deploys require asking. See `docs/context-management.md` for session habits (one task per session, save longer plans to `docs/plans/<feature>.md`).
+## Don't
+
+- Don't read, print, or edit `.env` files, and never hard-code secrets or connection strings.
+- Don't hand-edit files in `prisma/migrations/`. Change `schema.prisma` and generate a migration.
+- Don't weaken or delete a failing test to make it pass. If the requirement changed, say so.
+- Don't let public pages or endpoints return emails, rosters, or RSVPs.
+- Don't trust role or team IDs sent from the client; derive them from the session.
+- Don't add dependencies without asking first.
+- Don't let the stretch AI feature write to the schedule. It only produces a structured request that the deterministic rescheduler turns into a proposal.
+
+## Security (OWASP Top 10 awareness)
+
+- **Broken access control (A01):** the biggest risk here. Captains must not edit other teams, players must not report scores. Every service checks membership; integration tests cover each role.
+- **Injection (A03):** Prisma parameterizes queries. No `$queryRawUnsafe`. Zod validates every input.
+- **Cryptographic failures / secrets (A02):** secrets only in Vercel env vars and local `.env`, never in the repo.
+- **Insecure design (A04):** reschedules are proposals, never direct writes.
+- **Security misconfiguration (A05):** no debug output in production, security headers set in `next.config.ts`.
+- **Vulnerable components (A06):** `npm audit` runs in CI.
+- **Auth failures (A07):** sessions come from Auth.js only; no custom auth.
+- **Data integrity (A08):** score changes require confirmation from the opposing captain or a coordinator.
+- **Logging (A09):** log approvals, score disputes, and role changes with user ID and time.
+- **SSRF (A10):** the app makes no user-controlled outbound requests.
+
+## Definition of done
+
+- Acceptance criteria from docs/PRD.md have tests, and they pass.
+- `typecheck`, `lint`, and `test` pass locally and in CI.
+- Role checks have an integration test for the allowed role and at least one denied role.
+- No new secrets, no public exposure of personal data.
+- PR includes AI disclosure (tool used, rough % AI-generated, what a human reviewed).
