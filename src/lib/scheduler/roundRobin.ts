@@ -1,4 +1,4 @@
-import { ok, type Result } from "../result";
+import { err, ok, type Result } from "../result";
 
 export type Round = { games: [string, string][]; bye: string | null };
 export type RoundRobinSchedule = Round[];
@@ -12,6 +12,8 @@ export function generateRoundRobin(
   teamIds: string[],
   _seed: number,
 ): Result<RoundRobinSchedule, RoundRobinError> {
+  if (teamIds.length < 2) return err({ code: "TOO_FEW_TEAMS", count: teamIds.length });
+
   // An odd count gets a null placeholder; whoever is paired with it has the bye.
   const entrants: (string | null)[] = teamIds.length % 2 === 0 ? [...teamIds] : [...teamIds, null];
   const [fixed, ...rest] = entrants;
